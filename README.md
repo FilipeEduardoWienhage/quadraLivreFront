@@ -1,5 +1,7 @@
 # QuadraLivre — front-end
 
+[![CI](https://github.com/FilipeEduardoWienhage/quadraLivreFront/actions/workflows/ci.yml/badge.svg)](https://github.com/FilipeEduardoWienhage/quadraLivreFront/actions/workflows/ci.yml)
+
 Sistema de gestão de uma academia de tênis: agenda de quadras e espaços, aulas e turmas,
 contratos (pacotes e mensalidades) e financeiro. Uso exclusivo da administração.
 

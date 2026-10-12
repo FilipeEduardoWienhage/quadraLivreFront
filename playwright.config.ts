@@ -10,7 +10,8 @@ export default defineConfig({
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 1 : 0,
-  reporter: process.env.CI ? 'github' : 'list',
+  // no CI: anotações no próprio GitHub + relatório HTML (enviado como artefato quando falha)
+  reporter: process.env.CI ? [['github'], ['html', { open: 'never' }]] : 'list',
   // o mock simula latência de rede; com os testes em paralelo, a 1ª carga pode passar de 5s
   expect: { timeout: 10_000 },
   use: {
