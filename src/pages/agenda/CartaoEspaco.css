@@ -1,0 +1,242 @@
+.cartao-espaco {
+  display: flex;
+  flex-direction: column;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  box-shadow: 0 1px 2px rgba(16, 24, 40, 0.05);
+  overflow: hidden;
+  transition: box-shadow 0.15s;
+}
+
+.cartao-espaco:hover {
+  box-shadow: 0 4px 12px rgba(16, 24, 40, 0.08);
+}
+
+/* ---------- cabeçalho ---------- */
+
+.cartao-espaco-cabecalho {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--border);
+}
+
+.cartao-espaco-cabecalho h2 {
+  margin: 0;
+  font-size: 1rem;
+  line-height: 1.3;
+}
+
+.cartao-espaco-resumo {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+.cartao-espaco-selo {
+  flex-shrink: 0;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.cartao-espaco-selo-livre {
+  background: #e3f4e4;
+  color: #1e6b22;
+}
+
+.cartao-espaco-selo-em-uso {
+  background: #fdf3d7;
+  color: #8a5a00;
+}
+
+.cartao-espaco-selo-indisponivel {
+  background: #eceff3;
+  color: #52606d;
+}
+
+/* ---------- linha do tempo ---------- */
+
+.cartao-espaco-linha {
+  height: 340px;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-strong) transparent;
+}
+
+.cartao-espaco-indisponivel .cartao-espaco-linha {
+  background: repeating-linear-gradient(-45deg, var(--bg) 0 6px, var(--surface) 6px 12px);
+}
+
+.cartao-espaco-dia {
+  position: relative;
+  /* respiro para o rótulo da primeira hora, que sobe meia altura */
+  margin-top: 8px;
+}
+
+.cartao-espaco-fatia {
+  position: relative;
+  display: flex;
+  box-sizing: border-box;
+  padding-left: 52px;
+  border-top: 1px solid #f1f3f5;
+}
+
+.cartao-espaco-hora-cheia {
+  border-top-color: var(--border);
+}
+
+.cartao-espaco-rotulo {
+  position: absolute;
+  /* acima da camada do horário passado, para as horas continuarem legíveis */
+  z-index: 1;
+  left: 0;
+  top: 0;
+  width: 46px;
+  transform: translateY(-50%);
+  padding-right: 10px;
+  background: var(--surface);
+  font-size: 0.6875rem;
+  color: var(--text-muted);
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.cartao-espaco-livre {
+  flex: 1;
+  margin: 2px 8px 2px 0;
+  padding: 0 8px;
+  border: 1px dashed transparent;
+  border-radius: 6px;
+  background: transparent;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.cartao-espaco-livre span {
+  visibility: hidden;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--accent);
+}
+
+.cartao-espaco-livre:hover,
+.cartao-espaco-livre:focus-visible {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+  outline: none;
+}
+
+.cartao-espaco-livre:hover span,
+.cartao-espaco-livre:focus-visible span {
+  visibility: visible;
+}
+
+/* horário que já passou (hoje) */
+.cartao-espaco-passado {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  background: rgba(245, 247, 250, 0.65);
+  pointer-events: none;
+}
+
+/* linha do "agora" */
+.cartao-espaco-agora {
+  position: absolute;
+  left: 50px;
+  right: 0;
+  height: 2px;
+  background: var(--danger);
+  pointer-events: none;
+  z-index: 2;
+}
+
+.cartao-espaco-agora::before {
+  content: '';
+  position: absolute;
+  left: -4px;
+  top: -4px;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--danger);
+}
+
+/* ---------- blocos ---------- */
+
+.cartao-espaco-bloco {
+  position: absolute;
+  left: 56px;
+  right: 10px;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: flex-start;
+  gap: 1px;
+  box-sizing: border-box;
+  padding: 5px 10px;
+  border: none;
+  border-left: 4px solid;
+  border-radius: 6px;
+  box-shadow: 0 1px 2px rgba(16, 24, 40, 0.08);
+  overflow: hidden;
+  font: inherit;
+  font-size: 0.8125rem;
+  line-height: 1.3;
+  text-align: left;
+  cursor: pointer;
+  transition:
+    transform 0.1s,
+    box-shadow 0.1s;
+}
+
+.cartao-espaco-bloco:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 10px rgba(16, 24, 40, 0.12);
+}
+
+.cartao-espaco-bloco.selecionado {
+  outline: 2px solid var(--cor);
+  outline-offset: 1px;
+}
+
+.cartao-espaco-bloco-hora {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  color: var(--cor);
+  font-variant-numeric: tabular-nums;
+  /* escurece a cor para o texto ficar legível sobre o fundo claro */
+  filter: brightness(0.75);
+}
+
+.cartao-espaco-bloco strong,
+.cartao-espaco-bloco-sub {
+  max-width: 100%;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.cartao-espaco-bloco-sub {
+  color: var(--text-muted);
+}
+
+/* bloco curto: hora e título na mesma linha */
+.cartao-espaco-bloco.compacto {
+  flex-direction: row;
+  align-items: center;
+  gap: 6px;
+  padding-top: 0;
+  padding-bottom: 0;
+}

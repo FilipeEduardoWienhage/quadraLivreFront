@@ -1,0 +1,10 @@
+.turma-alunos-vagas {
+  margin: 0 0 12px;
+  color: var(--text-muted);
+}
+
+.turma-alunos-adicionar {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 16px;
+}

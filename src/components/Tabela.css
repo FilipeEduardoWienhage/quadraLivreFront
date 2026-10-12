@@ -1,0 +1,63 @@
+.tabela-container {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow-x: auto;
+}
+
+.tabela {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.tabela th,
+.tabela td {
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--border);
+}
+
+.tabela th {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  color: var(--text-muted);
+  background: var(--bg);
+}
+
+.tabela tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.tabela tbody tr:hover td {
+  background: var(--bg);
+}
+
+.alinhar-esquerda {
+  text-align: left;
+}
+
+.alinhar-centro {
+  text-align: center;
+}
+
+.alinhar-direita {
+  text-align: right;
+}
+
+.tabela-acoes {
+  width: 1%;
+  white-space: nowrap;
+}
+
+.tabela-acoes-botoes {
+  display: flex;
+  justify-content: flex-end;
+  gap: 4px;
+}
+
+.tabela-mensagem {
+  padding: 32px 16px;
+  text-align: center;
+  color: var(--text-muted);
+}

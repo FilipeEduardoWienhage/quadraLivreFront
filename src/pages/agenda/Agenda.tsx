@@ -1,0 +1,305 @@
+import { useEffect, useMemo, useState } from 'react'
+import { Alerta, Botao, CabecalhoPagina, ModalMotivo } from '../../components'
+import { FUNCIONAMENTO, INTERVALO_AGENDA_MIN } from '../../config'
+import { useConfiguracoes } from '../../hooks/useConfiguracoes'
+import { mensagemErro, useRecurso } from '../../hooks/useRecurso'
+import { useToast } from '../../hooks/useToast'
+import {
+  agendamentosApi,
+  contratosApi,
+  espacosApi,
+  modalidadesApi,
+  pessoasApi,
+  planosApi,
+  turmasApi,
+  type DadosAgendamento,
+} from '../../services'
+import type { Agendamento, Id, Presenca } from '../../types/models'
+import { formatarDiaPorExtenso, hojeIso } from '../../utils/data'
+import { minutos, paraHora } from '../../utils/horarios'
+import { omitir } from '../../utils/objeto'
+import BarraAgenda from './BarraAgenda'
+import CartaoEspaco from './CartaoEspaco'
+import type { CorDe, Nomes } from './descricao'
+import { LOCACOES, QUADRAS } from './filtros'
+import LegendaCores from './LegendaCores'
+import ModalAgendamento, { type InicialAgendamento } from './ModalAgendamento'
+import ModalCores from './ModalCores'
+import PainelDia from './PainelDia'
+import { useAgendaDoDia } from './useAgendaDoDia'
+import './Agenda.css'
+
+/** Enquanto as cores carregam, ou se faltar a modalidade. */
+const COR_NEUTRA = '#6b7280'
+
+const ABERTURA = minutos(FUNCIONAMENTO.abertura)
+const FECHAMENTO = minutos(FUNCIONAMENTO.fechamento)
+
+const minutoDoDia = () => {
+  const agora = new Date()
+  return agora.getHours() * 60 + agora.getMinutes()
+}
+
+/** Minuto atual do dia, atualizado sozinho para a linha do "agora" andar. */
+function useMinutoAtual() {
+  const [minuto, setMinuto] = useState(minutoDoDia)
+  useEffect(() => {
+    const id = setInterval(() => setMinuto(minutoDoDia()), 30_000)
+    return () => clearInterval(id)
+  }, [])
+  return minuto
+}
+
+/** Agora arredondado para a próxima fatia da agenda, dentro do funcionamento. */
+function proximaFatia() {
+  const fatia = Math.ceil(minutoDoDia() / INTERVALO_AGENDA_MIN) * INTERVALO_AGENDA_MIN
+  return Math.min(Math.max(fatia, ABERTURA), FECHAMENTO - INTERVALO_AGENDA_MIN)
+}
+
+export default function Agenda() {
+  const toast = useToast()
+  const hoje = hojeIso()
+  const minutoAtual = useMinutoAtual()
+  const [data, setData] = useState(hoje)
+  /** '' = todas; LOCACOES; ou o id de uma modalidade */
+  const [atividadeFiltro, setAtividadeFiltro] = useState('')
+  /** '' = todos; QUADRAS; ou o id de um espaço */
+  const [espacoFiltro, setEspacoFiltro] = useState('')
+  const [selecionadoId, setSelecionadoId] = useState<Id | null>(null)
+  const [novo, setNovo] = useState<InicialAgendamento | null>(null)
+  const [cancelando, setCancelando] = useState<Agendamento | null>(null)
+
+  const agenda = useAgendaDoDia(data)
+  const espacos = useRecurso(espacosApi)
+  const pessoas = useRecurso(pessoasApi)
+  const modalidades = useRecurso(modalidadesApi)
+  const turmas = useRecurso(turmasApi)
+  const contratos = useRecurso(contratosApi)
+  const planos = useRecurso(planosApi)
+  const configuracoes = useConfiguracoes()
+  const [editandoCores, setEditandoCores] = useState(false)
+
+  const nomes = useMemo<Nomes>(
+    () => ({
+      pessoa: new Map(pessoas.itens.map((p) => [p.id, p.nome])),
+      modalidade: new Map(modalidades.itens.map((m) => [m.id, m.nome])),
+      turma: new Map(turmas.itens.map((t) => [t.id, t.nome])),
+      espaco: new Map(espacos.itens.map((e) => [e.id, e.nome])),
+    }),
+    [pessoas.itens, modalidades.itens, turmas.itens, espacos.itens],
+  )
+
+  // quadras primeiro; espaços inativos não aparecem (em manutenção aparecem, bloqueados)
+  const espacosDaAgenda = espacos.itens
+    .filter((e) => e.status !== 'INATIVO')
+    .sort((a, b) => (a.tipo === b.tipo ? a.nome.localeCompare(b.nome) : a.tipo === 'QUADRA' ? -1 : 1))
+
+  const modalidadeDaTurma = new Map(turmas.itens.map((t) => [t.id, t.modalidadeId]))
+  const modalidadeDe = (a: Agendamento) =>
+    a.tipo === 'AULA' ? a.modalidadeId : a.tipo === 'AULA_TURMA' ? modalidadeDaTurma.get(a.turmaId ?? 0) : undefined
+
+  const modalidadesAtivas = modalidades.itens.filter((m) => m.ativo)
+  const corModalidade = new Map(modalidades.itens.map((m) => [m.id, m.cor]))
+  const corDe: CorDe = (a) =>
+    a.tipo === 'LOCACAO'
+      ? (configuracoes.configuracoes?.corLocacao ?? COR_NEUTRA)
+      : (corModalidade.get(modalidadeDe(a) ?? 0) ?? COR_NEUTRA)
+
+  async function salvarCores(corLocacao: string, coresModalidades: Map<Id, string>) {
+    if (configuracoes.configuracoes && corLocacao !== configuracoes.configuracoes.corLocacao) {
+      await configuracoes.salvar({ ...configuracoes.configuracoes, corLocacao })
+    }
+    for (const [id, cor] of coresModalidades) {
+      const modalidade = modalidades.itens.find((m) => m.id === id)
+      if (modalidade) await modalidadesApi.atualizar(id, { ...omitir(modalidade, 'id'), cor })
+    }
+    await modalidades.recarregar()
+  }
+
+  // filtros: atividade (o quê) e espaço (onde), combináveis
+  const naAtividade = (a: Agendamento) =>
+    !atividadeFiltro ||
+    (atividadeFiltro === LOCACOES ? a.tipo === 'LOCACAO' : modalidadeDe(a) === Number(atividadeFiltro))
+  const espacosDoFiltro = espacosDaAgenda.filter(
+    (e) => !espacoFiltro || (espacoFiltro === QUADRAS ? e.tipo === 'QUADRA' : e.id === Number(espacoFiltro)),
+  )
+  const idsDoFiltro = new Set(espacosDoFiltro.map((e) => e.id))
+
+  const visiveis = agenda.agendamentos.filter((a) => naAtividade(a) && idsDoFiltro.has(a.espacoId))
+  const ativosVisiveis = visiveis.filter((a) => a.status !== 'CANCELADO')
+  const selecionado = agenda.agendamentos.find((a) => a.id === selecionadoId) ?? null
+
+  // filtro de espaço mostra o card mesmo vazio (para marcar algo nele);
+  // só o de atividade esconde os espaços sem nada daquele tipo no dia
+  const cartoes =
+    atividadeFiltro && !espacoFiltro
+      ? espacosDoFiltro.filter((e) => ativosVisiveis.some((a) => a.espacoId === e.id))
+      : espacosDoFiltro
+
+  // com filtro de atividade ou em outro dia: rola para o primeiro agendamento; hoje: para agora
+  const primeiro = ativosVisiveis[0]
+  const rolarPara =
+    data === hoje && !atividadeFiltro ? proximaFatia() : primeiro ? minutos(primeiro.dataInicio.slice(11, 16)) : ABERTURA
+
+  function irPara(novaData: string) {
+    setData(novaData)
+    setSelecionadoId(null)
+  }
+
+  function novoAgendamento(espacoId?: Id, horaInicio?: string) {
+    const padrao = espacosDaAgenda.find((e) => e.status === 'ATIVO' && e.locacao !== 'NAO') ?? espacosDaAgenda[0]
+    setNovo({
+      espacoId: espacoId ?? padrao?.id ?? 0,
+      data,
+      horaInicio: horaInicio ?? paraHora(data === hoje ? proximaFatia() : ABERTURA),
+    })
+  }
+
+  async function criar(dados: DadosAgendamento) {
+    const criado = await agendamentosApi.criar(dados)
+    agenda.recarregar()
+    // agendar em outro dia leva a agenda até ele; a lista continua visível (o toast confirma)
+    irPara(criado.dataInicio.slice(0, 10))
+  }
+
+  function registrarPresenca(a: Agendamento, participanteId: Id, presenca: Presenca) {
+    agendamentosApi
+      .registrarPresenca(a.id, participanteId, presenca)
+      .then(() => {
+        toast.sucesso('Presença registrada.')
+        agenda.recarregar()
+      })
+      .catch((e: unknown) => toast.erro(mensagemErro(e)))
+  }
+
+  async function cancelar(motivo: string) {
+    if (!cancelando) return
+    await agendamentosApi.cancelar(cancelando.id, motivo)
+    agenda.recarregar()
+  }
+
+  const erro =
+    agenda.erro ??
+    espacos.erro ??
+    pessoas.erro ??
+    modalidades.erro ??
+    turmas.erro ??
+    contratos.erro ??
+    planos.erro ??
+    configuracoes.erro
+  const diaPorExtenso = formatarDiaPorExtenso(data)
+
+  return (
+    <>
+      <CabecalhoPagina
+        titulo="Agenda"
+        descricao={diaPorExtenso[0].toUpperCase() + diaPorExtenso.slice(1)}
+        acoes={<Botao onClick={() => novoAgendamento()}>Novo agendamento</Botao>}
+      />
+
+      {erro && <Alerta tipo="erro">{erro}</Alerta>}
+
+      <BarraAgenda
+        data={data}
+        hoje={hoje}
+        onIrPara={irPara}
+        atividade={atividadeFiltro}
+        onAtividade={setAtividadeFiltro}
+        espaco={espacoFiltro}
+        onEspaco={setEspacoFiltro}
+        modalidades={modalidades.itens}
+        espacos={espacosDaAgenda}
+      >
+        <LegendaCores
+          corLocacao={configuracoes.configuracoes?.corLocacao ?? COR_NEUTRA}
+          modalidades={modalidadesAtivas}
+          onEditar={() => setEditandoCores(true)}
+        />
+      </BarraAgenda>
+
+      <div className="agenda">
+        <div className="agenda-cartoes">
+          {/* só o filtro de atividade esvazia a lista de cards */}
+          {atividadeFiltro && cartoes.length === 0 && !agenda.carregando && (
+            <p className="agenda-sem-resultado">
+              Nenhum agendamento de{' '}
+              {atividadeFiltro === LOCACOES ? 'locação' : nomes.modalidade.get(Number(atividadeFiltro))} neste dia.
+            </p>
+          )}
+          {cartoes.map((espaco) => {
+            const doEspaco = ativosVisiveis.filter((a) => a.espacoId === espaco.id)
+            // com filtro de atividade, cada card mostra o seu primeiro agendamento filtrado
+            const rolarCard =
+              atividadeFiltro && doEspaco[0] ? minutos(doEspaco[0].dataInicio.slice(11, 16)) : rolarPara
+            return (
+              <CartaoEspaco
+                key={espaco.id}
+                espaco={espaco}
+                agendamentos={doEspaco}
+                nomes={nomes}
+                corDe={corDe}
+                selecionadoId={selecionadoId}
+                minutoAtual={data === hoje ? minutoAtual : null}
+                rolarPara={rolarCard}
+                onSelecionar={(a) => setSelecionadoId(a.id)}
+                onHorarioLivre={(hora) => novoAgendamento(espaco.id, hora)}
+              />
+            )
+          })}
+        </div>
+
+        <div className="agenda-painel">
+          <PainelDia
+            agendamentos={visiveis}
+            nomes={nomes}
+            corDe={corDe}
+            selecionado={selecionado}
+            carregando={agenda.carregando}
+            onSelecionar={(a) => setSelecionadoId(a?.id ?? null)}
+            onPresenca={registrarPresenca}
+            onCancelar={setCancelando}
+          />
+        </div>
+      </div>
+
+      {editandoCores && configuracoes.configuracoes && (
+        <ModalCores
+          corLocacao={configuracoes.configuracoes.corLocacao}
+          modalidades={modalidadesAtivas}
+          onSalvar={salvarCores}
+          onFechar={() => setEditandoCores(false)}
+        />
+      )}
+
+      {novo && (
+        <ModalAgendamento
+          inicial={novo}
+          espacos={espacos.itens}
+          pessoas={pessoas.itens}
+          modalidades={modalidades.itens}
+          contratos={contratos.itens}
+          planos={planos.itens}
+          onSalvar={criar}
+          onFechar={() => setNovo(null)}
+        />
+      )}
+
+      {cancelando && (
+        <ModalMotivo
+          titulo="Cancelar agendamento"
+          textoConfirmar="Cancelar agendamento"
+          mensagemSucesso="Agendamento cancelado."
+          onConfirmar={cancelar}
+          onFechar={() => setCancelando(null)}
+        >
+          {cancelando.tipo === 'LOCACAO' && (
+            <Alerta tipo="info">
+              A cobrança em aberto desta locação também será cancelada. Se já foi paga, a devolução é feita no
+              Financeiro.
+            </Alerta>
+          )}
+        </ModalMotivo>
+      )}
+    </>
+  )
+}

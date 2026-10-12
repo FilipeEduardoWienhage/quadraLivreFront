@@ -8,6 +8,8 @@ const menu = [
   { to: '/planos', label: 'Planos' },
   { to: '/contratos', label: 'Contratos' },
   { to: '/quadras', label: 'Quadras' },
+  { to: '/espacos', label: 'Espaços' },
+  { to: '/modalidades', label: 'Modalidades' },
   { to: '/servicos', label: 'Serviços' },
   { to: '/financeiro', label: 'Financeiro' },
 ]

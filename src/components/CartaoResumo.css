@@ -1,0 +1,37 @@
+.cartao-resumo {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 14px 16px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-left: 4px solid var(--border-strong);
+  border-radius: var(--radius);
+}
+
+.cartao-resumo-positivo {
+  border-left-color: var(--accent);
+}
+
+.cartao-resumo-alerta {
+  border-left-color: var(--danger);
+}
+
+.cartao-resumo-rotulo {
+  font-size: 0.8125rem;
+  color: var(--text-muted);
+}
+
+.cartao-resumo-valor {
+  font-size: 1.375rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.cartao-resumo-alerta .cartao-resumo-valor {
+  color: var(--danger);
+}
+
+.cartao-resumo-detalhe {
+  font-size: 0.8125rem;
+  color: var(--text-muted);
+}

@@ -1,0 +1,68 @@
+.modal-fundo {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 10vh 16px 16px;
+  background: rgba(15, 23, 20, 0.45);
+  overflow-y: auto;
+}
+
+.modal {
+  width: 100%;
+  background: var(--surface);
+  border-radius: 10px;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.2);
+}
+
+.modal-pequena {
+  max-width: 400px;
+}
+
+.modal-media {
+  max-width: 560px;
+}
+
+.modal-grande {
+  max-width: 820px;
+}
+
+.modal-cabecalho {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--border);
+}
+
+.modal-cabecalho h2 {
+  margin: 0;
+  font-size: 1.125rem;
+}
+
+.modal-fechar {
+  border: none;
+  background: none;
+  font-size: 1.5rem;
+  line-height: 1;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+.modal-corpo {
+  padding: 20px;
+}
+
+.modal-texto {
+  margin: 0;
+}
+
+.modal-rodape {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 12px 20px;
+  border-top: 1px solid var(--border);
+}

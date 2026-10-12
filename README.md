@@ -1,32 +1,71 @@
-# React + TypeScript + Vite
+# QuadraLivre — front-end
 
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
+Sistema de gestão de uma academia de tênis: agenda de quadras e espaços, aulas e turmas,
+contratos (pacotes e mensalidades) e financeiro. Uso exclusivo da administração.
 
-Currently, two official plugins are available:
+Este repositório é o front-end. O backend (API Java) ainda não existe: os dados vêm de um
+**mock** que simula a API no navegador (ver [Dados mock](#dados-mock)).
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+## Stack
 
-## React Compiler
+- React 19 + TypeScript + Vite
+- React Router
+- CSS puro por componente (sem framework de UI)
+- Oxlint
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+## Como rodar
 
-## Expanding the Oxlint configuration
-
-If you are developing a production application, we recommend enabling type-aware lint rules by installing `oxlint-tsgolint` and editing `.oxlintrc.json`:
-
-```json
-{
-  "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "plugins": ["react", "typescript", "oxc"],
-  "options": {
-    "typeAware": true
-  },
-  "rules": {
-    "react/rules-of-hooks": "error",
-    "react/only-export-components": ["warn", { "allowConstantExport": true }]
-  }
-}
+```bash
+npm install
+npm run dev      # servidor de desenvolvimento (http://localhost:5173)
+npm run build    # checagem de tipos + build de produção
+npm run lint     # oxlint
 ```
 
-See the [Oxlint rules documentation](https://oxc.rs/docs/guide/usage/linter/rules) for the full list of rules and categories.
+## Telas
+
+| Tela | O que faz |
+|---|---|
+| Agenda | Um card por espaço com a linha do tempo do dia; locações (valor pela tabela de preços), aulas (com cota do contrato) e encontros de turma; presença e cancelamento |
+| Pessoas | Cadastro único com papéis acumuláveis (aluno, professor); sem papel = cliente |
+| Turmas | Horários semanais, professor, local e entrada/saída de alunos com histórico |
+| Planos | O que a academia vende, por modalidade (pacote ou mensal) |
+| Contratos | Combinam planos de modalidades diferentes; ajuste, encerramento e cancelamento |
+| Quadras / Espaços | Locais agendáveis, com forma de locação (por hora, por período ou não alugável) e preços |
+| Modalidades | Tênis, treino físico… com a cor usada na agenda |
+| Serviços | Itens avulsos cobráveis |
+| Financeiro | Contas a receber e a pagar, geração de mensalidades, pagamento e cancelamento |
+
+## Estrutura
+
+```
+docs/modelagem.md        modelo de dados e regras de negócio (fonte da verdade)
+src/
+  types/models.ts        tipos das entidades, no formato do JSON da API
+  services/
+    api.ts               contrato da API: o que o front espera do backend
+    index.ts             ponto único de acesso aos dados (trocar mock por API real é só aqui)
+    mock/                implementação simulada: CRUD genérico + regras do servidor
+  components/            componentes reutilizáveis (Tabela, ModalFormulario, Campo, Toast…)
+  hooks/                 useRecurso (lista + salvar/excluir), useEdicao (modal de cadastro)…
+  pages/                 uma pasta/arquivo por tela
+  utils/                 funções puras: datas, horários, preços, formatação
+  config.ts              horário de funcionamento e grade da agenda
+```
+
+## Dados mock
+
+- Os dados iniciais ficam em `src/services/mock/dados.ts` e, depois de alterados, são guardados
+  no `localStorage` do navegador.
+- O mock simula as regras que serão do servidor: conflitos de horário, cobrança da locação,
+  geração de mensalidades sem duplicidade, cota de aulas etc. Ao implementar o backend, essas
+  regras devem ir para lá.
+- Ao mudar o formato dos dados, aumente `VERSAO` em `src/services/mock/criarRecursoMock.ts`:
+  os dados antigos do navegador são ignorados e os iniciais voltam.
+
+## Convenções
+
+- Código, nomes e textos em português, como o domínio.
+- Regras e decisões de modelagem são registradas em `docs/modelagem.md`, com o motivo.
+- Registros referenciados por outros (pessoas, planos, contratos, transações) não são excluídos:
+  são inativados, encerrados ou cancelados, para preservar o histórico.

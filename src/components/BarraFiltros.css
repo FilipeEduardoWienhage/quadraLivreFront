@@ -1,0 +1,14 @@
+.barra-filtros {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.barra-filtros > * {
+  width: auto;
+}
+
+.barra-filtros > :first-child {
+  flex: 1 1 240px;
+}

@@ -1,0 +1,106 @@
+.formulario {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.campo {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.campo-rotulo {
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+.campo-obrigatorio {
+  color: var(--danger);
+}
+
+.controle {
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius);
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+}
+
+.controle:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+
+.controle-cor {
+  width: 64px;
+  height: 36px;
+  padding: 2px;
+  cursor: pointer;
+}
+
+/* quadradinho mostrando uma cor (listas, legendas) */
+.amostra-cor {
+  display: inline-block;
+  width: 18px;
+  height: 18px;
+  border-radius: 4px;
+  border: 1px solid rgba(0, 0, 0, 0.15);
+  vertical-align: middle;
+}
+
+.campo-com-erro .controle {
+  border-color: var(--danger);
+}
+
+.campo-ajuda,
+.campo-erro {
+  font-size: 0.8125rem;
+}
+
+.campo-ajuda {
+  color: var(--text-muted);
+}
+
+.campo-erro {
+  color: var(--danger);
+}
+
+.caixa-selecao {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+}
+
+.caixa-selecao input {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--accent);
+}
+
+.grupo-campos {
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: none;
+}
+
+.grupo-campos legend {
+  padding: 0;
+  margin-bottom: 6px;
+}
+
+.grupo-campos-ajuda {
+  margin: -4px 0 8px;
+}
+
+.linha-campos {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 16px;
+}

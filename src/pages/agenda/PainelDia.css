@@ -1,0 +1,99 @@
+.painel-dia {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 12px;
+  padding: 16px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+
+.painel-dia > .botao-fantasma {
+  align-self: flex-start;
+}
+
+.painel-dia-titulo {
+  margin: 0;
+  font-size: 1.125rem;
+}
+
+.painel-dia-subtitulo {
+  margin: 4px 0 0;
+  font-size: 0.9375rem;
+}
+
+.painel-dia-vazio {
+  margin: 0;
+  color: var(--text-muted);
+}
+
+.painel-dia-lista,
+.painel-dia-participantes {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.painel-dia-item {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  width: 100%;
+  padding: 8px 10px;
+  border: none;
+  border-left: 4px solid;
+  border-radius: 4px;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.painel-dia-item > span {
+  font-size: 0.8125rem;
+  color: var(--text-muted);
+}
+
+.painel-dia-item .painel-dia-hora {
+  font-variant-numeric: tabular-nums;
+}
+
+.painel-dia-item.cancelado {
+  opacity: 0.55;
+  text-decoration: line-through;
+}
+
+.painel-dia-dados {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 6px 12px;
+  margin: 0;
+  font-size: 0.9375rem;
+}
+
+.painel-dia-dados dt {
+  color: var(--text-muted);
+}
+
+.painel-dia-dados dd {
+  margin: 0;
+}
+
+.painel-dia-participantes li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.painel-dia-participantes small {
+  display: block;
+  color: var(--text-muted);
+}
+
+.painel-dia-participantes .controle {
+  width: auto;
+}

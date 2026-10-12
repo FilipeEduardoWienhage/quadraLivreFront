@@ -1,0 +1,57 @@
+.financeiro-resumo {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.financeiro-descricao {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.financeiro-descricao span {
+  font-size: 0.8125rem;
+  color: var(--text-muted);
+}
+
+.financeiro-despesa {
+  color: var(--danger);
+}
+
+.financeiro-itens {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.financeiro-item {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+
+.financeiro-item-descricao {
+  flex: 1 1 200px;
+}
+
+.financeiro-item > .controle {
+  width: 110px;
+}
+
+.financeiro-itens-rodape {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.financeiro-itens-rodape .controle {
+  width: auto;
+  flex: 0 1 320px;
+}

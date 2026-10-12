@@ -1,0 +1,23 @@
+.alerta {
+  padding: 10px 14px;
+  border: 1px solid;
+  border-radius: var(--radius);
+  margin-bottom: 16px;
+}
+
+.alerta-erro {
+  background: #fdecec;
+  border-color: #f5c2c2;
+  color: #a12626;
+}
+
+.alerta-info {
+  background: #e8f1fc;
+  border-color: #c3d8f3;
+  color: #1d5aa6;
+}
+
+/* dentro do formulário o espaçamento vem do gap */
+.formulario .alerta {
+  margin-bottom: 0;
+}

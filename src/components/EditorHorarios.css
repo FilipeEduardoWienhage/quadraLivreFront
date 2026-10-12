@@ -1,0 +1,32 @@
+.editor-horarios {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.editor-horarios-linha {
+  display: grid;
+  grid-template-columns: minmax(120px, 1fr) minmax(100px, 130px) auto minmax(100px, 130px) auto;
+  align-items: center;
+  gap: 8px;
+}
+
+.editor-horarios-com-extra {
+  grid-template-columns: minmax(120px, 1fr) minmax(100px, 130px) auto minmax(100px, 130px) minmax(90px, 120px) auto;
+}
+
+.editor-horarios-ate {
+  color: var(--text-muted);
+  font-size: 0.875rem;
+}
+
+@media (max-width: 520px) {
+  .editor-horarios-linha,
+  .editor-horarios-com-extra {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .editor-horarios-ate {
+    display: none;
+  }
+}

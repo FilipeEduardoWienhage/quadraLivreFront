@@ -2,8 +2,14 @@
   --text: #1f2933;
   --text-muted: #616e7c;
   --bg: #f5f7fa;
+  --surface: #fff;
   --border: #e4e7eb;
+  --border-strong: #cbd2d9;
   --accent: #2f7d32;
+  --accent-hover: #27692a;
+  --accent-soft: rgba(47, 125, 50, 0.15);
+  --danger: #c62828;
+  --radius: 6px;
   --sidebar-bg: #1b2a1f;
   --sidebar-text: #c8d6cc;
 

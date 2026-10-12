@@ -1,0 +1,33 @@
+.etiqueta {
+  display: inline-block;
+  padding: 2px 10px;
+  border-radius: 999px;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.etiqueta-verde {
+  background: #e3f4e4;
+  color: #1e6b22;
+}
+
+.etiqueta-amarelo {
+  background: #fdf3d7;
+  color: #8a5a00;
+}
+
+.etiqueta-vermelho {
+  background: #fde4e4;
+  color: #a12626;
+}
+
+.etiqueta-azul {
+  background: #e1edfb;
+  color: #1d5aa6;
+}
+
+.etiqueta-cinza {
+  background: #eceff3;
+  color: #52606d;
+}

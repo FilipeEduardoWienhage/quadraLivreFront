@@ -1,0 +1,139 @@
+.agenda-barra {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.agenda-barra .controle {
+  width: auto;
+}
+
+.agenda-legenda {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  margin: 0 0 0 auto;
+  padding: 0;
+  list-style: none;
+  font-size: 0.875rem;
+  color: var(--text-muted);
+}
+
+.agenda-legenda li {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.agenda-legenda-cor {
+  width: 14px;
+  height: 14px;
+  border-left: 4px solid;
+  border-radius: 3px;
+}
+
+.agenda {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 320px;
+  align-items: start;
+  gap: 16px;
+}
+
+.agenda-cartoes {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 12px;
+}
+
+.agenda-sem-resultado {
+  grid-column: 1 / -1;
+  margin: 0;
+  padding: 32px 16px;
+  border: 1px dashed var(--border-strong);
+  border-radius: 10px;
+  color: var(--text-muted);
+  text-align: center;
+}
+
+.agenda-painel {
+  position: sticky;
+  top: 16px;
+  max-height: calc(100vh - 32px);
+  overflow-y: auto;
+}
+
+@media (max-width: 1100px) {
+  .agenda {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .agenda-painel {
+    position: static;
+    max-height: none;
+  }
+}
+
+/*
+ * Cor de um agendamento (cards, lista e legenda). A cor vem do cadastro em --cor
+ * (locação: configurações; aula e turma: modalidade); o fundo claro é derivado dela.
+ * Turma e aula da mesma modalidade têm a mesma cor; o selo diz qual é qual.
+ */
+.agenda-bloco {
+  --cor: #6b7280;
+  background: color-mix(in srgb, var(--cor) 18%, white);
+  border-color: var(--cor);
+}
+
+.agenda-selo {
+  display: inline-block;
+  padding: 0 6px;
+  border: 1px solid var(--cor);
+  border-radius: 999px;
+  font-size: 0.625rem;
+  font-weight: 700;
+  line-height: 1.6;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  vertical-align: 1px;
+}
+
+.agenda-selo-aula_turma {
+  background: var(--cor);
+  color: #fff;
+}
+
+.agenda-selo-aula {
+  background: var(--surface);
+  color: var(--cor);
+}
+
+/* alunos no formulário de aula */
+.agenda-alunos {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0 0 8px;
+  padding: 0;
+  list-style: none;
+}
+
+.agenda-alunos li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 6px 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+
+.agenda-alunos small {
+  display: block;
+  color: var(--text-muted);
+}
+
+.agenda-alunos small.agenda-cota-estourada {
+  color: var(--danger);
+}

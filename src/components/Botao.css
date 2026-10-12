@@ -1,0 +1,62 @@
+.botao {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 8px 16px;
+  border: 1px solid transparent;
+  border-radius: var(--radius);
+  font: inherit;
+  font-weight: 500;
+  cursor: pointer;
+  white-space: nowrap;
+  /* também usado em <Link> com aparência de botão */
+  text-decoration: none;
+}
+
+.botao:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.botao-pequeno {
+  padding: 4px 10px;
+  font-size: 0.875rem;
+}
+
+.botao-primario {
+  background: var(--accent);
+  color: #fff;
+}
+
+.botao-primario:hover:not(:disabled) {
+  background: var(--accent-hover);
+}
+
+.botao-secundario {
+  background: var(--surface);
+  border-color: var(--border);
+  color: var(--text);
+}
+
+.botao-secundario:hover:not(:disabled) {
+  background: var(--bg);
+}
+
+.botao-perigo {
+  background: var(--danger);
+  color: #fff;
+}
+
+.botao-perigo:hover:not(:disabled) {
+  filter: brightness(0.92);
+}
+
+.botao-fantasma {
+  background: transparent;
+  color: var(--accent);
+}
+
+.botao-fantasma:hover:not(:disabled) {
+  background: var(--accent-soft);
+}
