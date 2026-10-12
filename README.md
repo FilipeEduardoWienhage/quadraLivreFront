@@ -17,10 +17,28 @@ Este repositório é o front-end. O backend (API Java) ainda não existe: os dad
 
 ```bash
 npm install
-npm run dev      # servidor de desenvolvimento (http://localhost:5173)
-npm run build    # checagem de tipos + build de produção
-npm run lint     # oxlint
+npm run dev        # servidor de desenvolvimento (http://localhost:5173)
+npm run build      # checagem de tipos + build de produção
+npm run lint       # oxlint
+npm test           # testes unitários (Vitest)
+npm run test:e2e   # testes de ponta a ponta (Playwright)
 ```
+
+## Testes
+
+| Tipo | Onde | O que cobre |
+|---|---|---|
+| Unitários (Vitest) | `src/**/*.test.ts` | funções puras (preço, horários, datas, formatação, busca) e as regras do servidor simulado (mensalidades, conflitos de horário, cota, cancelamentos) |
+| Ponta a ponta (Playwright) | `e2e/*.spec.ts` | as telas no navegador: agendar, filtrar, cores, financeiro, cadastros |
+
+- Os dois congelam o relógio em **segunda-feira, 12/10/2026, 10:00** — o dia dos dados mock —
+  para que regras que dependem de "hoje" (vencidas, horários passados, "livre agora") sejam estáveis.
+- Cada teste começa dos dados de exemplo: o unitário recarrega o mock (`src/testes/servidor.ts`);
+  o de ponta a ponta abre um navegador limpo.
+- O Playwright usa o **Chrome instalado** e aproveita o `npm run dev` que estiver aberto (ou sobe um).
+  Em CI: `npx playwright install chromium` e `PW_CHANNEL=chromium`.
+- No Windows, rode a partir do caminho com a letra da unidade em maiúscula (`C:\...`): com `c:\...`
+  o Vitest pode carregar duas cópias de si mesmo e falhar com "failed to find the runner".
 
 ## Telas
 

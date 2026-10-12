@@ -1,7 +1,8 @@
 import type { Id } from '../../types/models'
 import type { Dados, Recurso } from '../api'
 
-const LATENCIA_MS = 250
+/** Simula a rede; nos testes automatizados fica em zero para não deixá-los lentos. */
+const LATENCIA_MS = import.meta.env.MODE === 'test' ? 0 : 250
 
 /**
  * Aumente a versão ao mudar o formato dos dados mock: o que estiver salvo

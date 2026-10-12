@@ -43,7 +43,7 @@ export default function PainelDia({
     const { titulo } = descrever(a, nomes)
     const cancelado = a.status === 'CANCELADO'
     return (
-      <aside className="painel-dia">
+      <aside className="painel-dia" aria-label="Agenda do dia">
         <Botao variante="fantasma" pequeno onClick={() => onSelecionar(null)}>
           ← Voltar à lista
         </Botao>
@@ -108,7 +108,7 @@ export default function PainelDia({
   }
 
   return (
-    <aside className="painel-dia">
+    <aside className="painel-dia" aria-label="Agenda do dia">
       <h2 className="painel-dia-titulo">Agenda do dia</h2>
       {carregando && <p className="painel-dia-vazio">Carregando…</p>}
       {!carregando && agendamentos.length === 0 && <p className="painel-dia-vazio">Nenhum agendamento neste dia.</p>}
