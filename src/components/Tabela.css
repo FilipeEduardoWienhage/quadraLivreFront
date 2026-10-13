@@ -61,3 +61,78 @@
   text-align: center;
   color: var(--text-muted);
 }
+
+/*
+ * Celular: cada linha vira um cartão — nome da coluna à esquerda, valor à direita, ações embaixo.
+ * O cabeçalho some só visualmente: continua disponível para leitores de tela.
+ */
+@media (max-width: 600px) {
+  .tabela thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+
+  .tabela,
+  .tabela tbody,
+  .tabela tr,
+  .tabela td {
+    display: block;
+    width: 100%;
+  }
+
+  .tabela tr {
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .tabela tbody tr:last-child {
+    border-bottom: none;
+  }
+
+  .tabela td {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-start;
+    /* valores agrupados à direita; o nome da coluna empurra-se para a esquerda (margin-right: auto) */
+    justify-content: flex-end;
+    gap: 4px 6px;
+    padding: 4px 0;
+    border-bottom: none;
+    text-align: right;
+  }
+
+  .tabela td[data-titulo]::before {
+    content: attr(data-titulo);
+    flex-shrink: 0;
+    margin-right: auto;
+    padding-right: 6px;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: var(--text-muted);
+    text-align: left;
+  }
+
+  .tabela tbody tr:hover td {
+    background: none;
+  }
+
+  .tabela-acoes {
+    width: 100%;
+    padding-top: 8px !important;
+  }
+
+  .tabela-acoes-botoes {
+    justify-content: flex-start;
+    flex-wrap: wrap;
+  }
+
+  .tabela td.tabela-mensagem {
+    display: block;
+    padding: 24px 0;
+    text-align: center;
+  }
+}

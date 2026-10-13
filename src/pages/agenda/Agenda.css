@@ -75,9 +75,29 @@
     grid-template-columns: minmax(0, 1fr);
   }
 
+  /* sem coluna lateral, a lista do dia vem antes dos cards: é o que se consulta no balcão */
   .agenda-painel {
+    order: -1;
     position: static;
     max-height: none;
+    /* ao rolar até o detalhe, não fica escondido sob a barra do topo */
+    scroll-margin-top: 72px;
+  }
+}
+
+@media (max-width: 600px) {
+  /* data ocupa o que sobra ao lado das setas; filtros e legenda em linhas próprias */
+  .agenda-barra input[type='date'] {
+    flex: 1;
+  }
+
+  .agenda-barra select {
+    flex: 1 1 100%;
+  }
+
+  .agenda-legenda {
+    width: 100%;
+    margin-left: 0;
   }
 }
 

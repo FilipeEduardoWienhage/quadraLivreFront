@@ -59,7 +59,8 @@ export default function Tabela<T extends { id: Id }>({
             itens.map((item) => (
               <tr key={item.id}>
                 {colunas.map((c) => (
-                  <td key={c.titulo} className={`alinhar-${c.alinhar ?? 'esquerda'}`}>
+                  // data-titulo: no celular a linha vira cartão e cada valor mostra o nome da coluna
+                  <td key={c.titulo} className={`alinhar-${c.alinhar ?? 'esquerda'}`} data-titulo={c.titulo}>
                     {c.valor(item)}
                   </td>
                 ))}

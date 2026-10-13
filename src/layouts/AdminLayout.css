@@ -45,3 +45,112 @@
   padding: 24px 32px;
   min-width: 0;
 }
+
+.sidebar-cabecalho {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 20px;
+}
+
+.sidebar-cabecalho .brand {
+  padding: 0 12px;
+}
+
+/* barra do topo, botão de fechar e fundo do menu: só em telas estreitas */
+.topo,
+.sidebar-fechar,
+.menu-fundo {
+  display: none;
+}
+
+@media (max-width: 900px) {
+  .layout {
+    flex-direction: column;
+  }
+
+  .topo {
+    position: sticky;
+    top: 0;
+    z-index: 50;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    background: var(--sidebar-bg);
+  }
+
+  .topo .brand {
+    padding: 0;
+    font-size: 1.125rem;
+  }
+
+  /* ☰ na barra do topo e ✕ dentro do menu */
+  .topo-botao {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    border: none;
+    border-radius: 6px;
+    background: transparent;
+    color: #fff;
+    font-size: 1.375rem;
+    cursor: pointer;
+  }
+
+  .topo-botao:hover,
+  .topo-botao:focus-visible {
+    background: rgba(255, 255, 255, 0.12);
+    outline: none;
+  }
+
+  .sidebar-cabecalho {
+    margin-bottom: 12px;
+  }
+
+  /* menu desliza por cima do conteúdo */
+  .sidebar {
+    position: fixed;
+    inset: 0 auto 0 0;
+    z-index: 90;
+    width: min(280px, 85vw);
+    overflow-y: auto;
+    transform: translateX(-100%);
+    /* fechado também sai da ordem de foco do teclado (visibility), depois da animação */
+    visibility: hidden;
+    transition:
+      transform 0.2s ease-out,
+      visibility 0s linear 0.2s;
+  }
+
+  .sidebar.aberto {
+    visibility: visible;
+    transition: transform 0.2s ease-out;
+    transform: translateX(0);
+    box-shadow: 8px 0 24px rgba(0, 0, 0, 0.25);
+  }
+
+  .sidebar .nav-link {
+    padding: 12px;
+  }
+
+  .menu-fundo {
+    position: fixed;
+    inset: 0;
+    z-index: 80;
+    display: block;
+    background: rgba(15, 23, 20, 0.45);
+  }
+
+  .content {
+    padding: 16px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sidebar {
+    transition: none;
+  }
+}

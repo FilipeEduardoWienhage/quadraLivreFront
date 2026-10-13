@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Alerta, Botao, CabecalhoPagina, ModalMotivo } from '../../components'
 import { INTERVALO_AGENDA_MIN } from '../../config'
 import { useConfiguracoes } from '../../hooks/useConfiguracoes'
@@ -156,6 +156,16 @@ export default function Agenda() {
         ? minutos(hora(primeiro.dataInicio))
         : abertura
 
+  const painel = useRef<HTMLDivElement>(null)
+
+  /** Bloco tocado num card: abre o detalhe; sem coluna lateral (celular/tablet), rola até ele. */
+  function selecionarBloco(a: Agendamento) {
+    setSelecionadoId(a.id)
+    if (window.matchMedia('(max-width: 1100px)').matches) {
+      painel.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    }
+  }
+
   function irPara(novaData: string) {
     setData(novaData)
     setSelecionadoId(null)
@@ -286,14 +296,14 @@ export default function Agenda() {
                 selecionadoId={selecionadoId}
                 minutoAtual={data === hoje ? minutoAtual : null}
                 rolarPara={rolarCard}
-                onSelecionar={(a) => setSelecionadoId(a.id)}
+                onSelecionar={selecionarBloco}
                 onHorarioLivre={(hora) => novoAgendamento(espaco.id, hora)}
               />
             )
           })}
         </div>
 
-        <div className="agenda-painel">
+        <div className="agenda-painel" ref={painel}>
           <PainelDia
             agendamentos={visiveis}
             nomes={nomes}
