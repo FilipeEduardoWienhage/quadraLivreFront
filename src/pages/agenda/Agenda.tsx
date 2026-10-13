@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Alerta, Botao, CabecalhoPagina, ModalMotivo } from '../../components'
-import { FUNCIONAMENTO, INTERVALO_AGENDA_MIN } from '../../config'
+import { INTERVALO_AGENDA_MIN } from '../../config'
 import { useConfiguracoes } from '../../hooks/useConfiguracoes'
 import { mensagemErro, useRecurso } from '../../hooks/useRecurso'
 import { useToast } from '../../hooks/useToast'
@@ -8,6 +8,7 @@ import {
   agendamentosApi,
   contratosApi,
   espacosApi,
+  feriadosApi,
   modalidadesApi,
   pessoasApi,
   planosApi,
@@ -16,11 +17,12 @@ import {
 } from '../../services'
 import type { Agendamento, Id, Presenca } from '../../types/models'
 import { formatarDiaPorExtenso, hojeIso } from '../../utils/data'
+import { funcionamentoDoDia } from '../../utils/funcionamento'
 import { minutos, paraHora } from '../../utils/horarios'
 import { omitir } from '../../utils/objeto'
 import BarraAgenda from './BarraAgenda'
 import CartaoEspaco from './CartaoEspaco'
-import type { CorDe, Nomes } from './descricao'
+import { hora, type CorDe, type Nomes } from './descricao'
 import { LOCACOES, QUADRAS } from './filtros'
 import LegendaCores from './LegendaCores'
 import ModalAgendamento, { type InicialAgendamento } from './ModalAgendamento'
@@ -31,9 +33,6 @@ import './Agenda.css'
 
 /** Enquanto as cores carregam, ou se faltar a modalidade. */
 const COR_NEUTRA = '#6b7280'
-
-const ABERTURA = minutos(FUNCIONAMENTO.abertura)
-const FECHAMENTO = minutos(FUNCIONAMENTO.fechamento)
 
 const minutoDoDia = () => {
   const agora = new Date()
@@ -50,10 +49,10 @@ function useMinutoAtual() {
   return minuto
 }
 
-/** Agora arredondado para a próxima fatia da agenda, dentro do funcionamento. */
-function proximaFatia() {
+/** Agora arredondado para a próxima fatia da agenda, dentro do funcionamento do dia. */
+function proximaFatia(abertura: number, fechamento: number) {
   const fatia = Math.ceil(minutoDoDia() / INTERVALO_AGENDA_MIN) * INTERVALO_AGENDA_MIN
-  return Math.min(Math.max(fatia, ABERTURA), FECHAMENTO - INTERVALO_AGENDA_MIN)
+  return Math.min(Math.max(fatia, abertura), fechamento - INTERVALO_AGENDA_MIN)
 }
 
 export default function Agenda() {
@@ -67,6 +66,7 @@ export default function Agenda() {
   const [espacoFiltro, setEspacoFiltro] = useState('')
   const [selecionadoId, setSelecionadoId] = useState<Id | null>(null)
   const [novo, setNovo] = useState<InicialAgendamento | null>(null)
+  const [editando, setEditando] = useState<Agendamento | null>(null)
   const [cancelando, setCancelando] = useState<Agendamento | null>(null)
 
   const agenda = useAgendaDoDia(data)
@@ -77,7 +77,16 @@ export default function Agenda() {
   const contratos = useRecurso(contratosApi)
   const planos = useRecurso(planosApi)
   const configuracoes = useConfiguracoes()
+  const feriados = useRecurso(feriadosApi)
   const [editandoCores, setEditandoCores] = useState(false)
+
+  /** null enquanto as configurações carregam */
+  const funcionamentoDe = (dia: string) =>
+    configuracoes.configuracoes ? funcionamentoDoDia(configuracoes.configuracoes.funcionamento, feriados.itens, dia) : null
+  const funcionamento = funcionamentoDe(data)
+  // limites da linha do tempo; em dia fechado não há linha do tempo
+  const [abertura, fechamento] =
+    funcionamento?.aberto ? [minutos(funcionamento.abertura), minutos(funcionamento.fechamento)] : [0, 0]
 
   const nomes = useMemo<Nomes>(
     () => ({
@@ -131,15 +140,21 @@ export default function Agenda() {
 
   // filtro de espaço mostra o card mesmo vazio (para marcar algo nele);
   // só o de atividade esconde os espaços sem nada daquele tipo no dia
-  const cartoes =
-    atividadeFiltro && !espacoFiltro
+  // em dia fechado (ou enquanto o funcionamento carrega) não há cards
+  const cartoes = !funcionamento?.aberto
+    ? []
+    : atividadeFiltro && !espacoFiltro
       ? espacosDoFiltro.filter((e) => ativosVisiveis.some((a) => a.espacoId === e.id))
       : espacosDoFiltro
 
   // com filtro de atividade ou em outro dia: rola para o primeiro agendamento; hoje: para agora
   const primeiro = ativosVisiveis[0]
   const rolarPara =
-    data === hoje && !atividadeFiltro ? proximaFatia() : primeiro ? minutos(primeiro.dataInicio.slice(11, 16)) : ABERTURA
+    data === hoje && !atividadeFiltro
+      ? proximaFatia(abertura, fechamento)
+      : primeiro
+        ? minutos(hora(primeiro.dataInicio))
+        : abertura
 
   function irPara(novaData: string) {
     setData(novaData)
@@ -151,7 +166,9 @@ export default function Agenda() {
     setNovo({
       espacoId: espacoId ?? padrao?.id ?? 0,
       data,
-      horaInicio: horaInicio ?? paraHora(data === hoje ? proximaFatia() : ABERTURA),
+      horaInicio:
+        horaInicio ??
+        (funcionamento?.aberto ? paraHora(data === hoje ? proximaFatia(abertura, fechamento) : abertura) : '08:00'),
     })
   }
 
@@ -160,6 +177,19 @@ export default function Agenda() {
     agenda.recarregar()
     // agendar em outro dia leva a agenda até ele; a lista continua visível (o toast confirma)
     irPara(criado.dataInicio.slice(0, 10))
+  }
+
+  /** Modal aberto: novo agendamento ou edição (que parte do próprio agendamento). */
+  const inicialDoModal: InicialAgendamento | null = editando
+    ? { espacoId: editando.espacoId, data: editando.dataInicio.slice(0, 10), horaInicio: hora(editando.dataInicio) }
+    : novo
+
+  async function salvarEdicao(original: Agendamento, dados: DadosAgendamento) {
+    const salvo = await agendamentosApi.atualizar(original.id, dados)
+    agenda.recarregar()
+    // remarcar para outro dia leva a agenda até ele, com o detalhe ainda aberto
+    irPara(salvo.dataInicio.slice(0, 10))
+    setSelecionadoId(salvo.id)
   }
 
   function registrarPresenca(a: Agendamento, participanteId: Id, presenca: Presenca) {
@@ -186,7 +216,8 @@ export default function Agenda() {
     turmas.erro ??
     contratos.erro ??
     planos.erro ??
-    configuracoes.erro
+    configuracoes.erro ??
+    feriados.erro
   const diaPorExtenso = formatarDiaPorExtenso(data)
 
   return (
@@ -219,8 +250,20 @@ export default function Agenda() {
 
       <div className="agenda">
         <div className="agenda-cartoes">
+          {funcionamento && !funcionamento.aberto && (
+            <p className="agenda-sem-resultado">
+              Academia fechada neste dia{funcionamento.feriado && ` (${funcionamento.feriado})`}. O horário de
+              funcionamento é definido em Configurações.
+            </p>
+          )}
+          {funcionamento?.aberto && funcionamento.feriado && (
+            <Alerta tipo="info">
+              Feriado: {funcionamento.feriado}. Horário especial das {funcionamento.abertura} às{' '}
+              {funcionamento.fechamento}.
+            </Alerta>
+          )}
           {/* só o filtro de atividade esvazia a lista de cards */}
-          {atividadeFiltro && cartoes.length === 0 && !agenda.carregando && (
+          {funcionamento?.aberto && atividadeFiltro && cartoes.length === 0 && !agenda.carregando && (
             <p className="agenda-sem-resultado">
               Nenhum agendamento de{' '}
               {atividadeFiltro === LOCACOES ? 'locação' : nomes.modalidade.get(Number(atividadeFiltro))} neste dia.
@@ -230,11 +273,13 @@ export default function Agenda() {
             const doEspaco = ativosVisiveis.filter((a) => a.espacoId === espaco.id)
             // com filtro de atividade, cada card mostra o seu primeiro agendamento filtrado
             const rolarCard =
-              atividadeFiltro && doEspaco[0] ? minutos(doEspaco[0].dataInicio.slice(11, 16)) : rolarPara
+              atividadeFiltro && doEspaco[0] ? minutos(hora(doEspaco[0].dataInicio)) : rolarPara
             return (
               <CartaoEspaco
                 key={espaco.id}
                 espaco={espaco}
+                abertura={abertura}
+                fechamento={fechamento}
                 agendamentos={doEspaco}
                 nomes={nomes}
                 corDe={corDe}
@@ -257,6 +302,7 @@ export default function Agenda() {
             carregando={agenda.carregando}
             onSelecionar={(a) => setSelecionadoId(a?.id ?? null)}
             onPresenca={registrarPresenca}
+            onEditar={setEditando}
             onCancelar={setCancelando}
           />
         </div>
@@ -271,16 +317,21 @@ export default function Agenda() {
         />
       )}
 
-      {novo && (
+      {inicialDoModal && (
         <ModalAgendamento
-          inicial={novo}
+          inicial={inicialDoModal}
+          agendamento={editando ?? undefined}
           espacos={espacos.itens}
           pessoas={pessoas.itens}
           modalidades={modalidades.itens}
           contratos={contratos.itens}
           planos={planos.itens}
-          onSalvar={criar}
-          onFechar={() => setNovo(null)}
+          funcionamentoDe={funcionamentoDe}
+          onSalvar={editando ? (dados) => salvarEdicao(editando, dados) : criar}
+          onFechar={() => {
+            setNovo(null)
+            setEditando(null)
+          }}
         />
       )}
 

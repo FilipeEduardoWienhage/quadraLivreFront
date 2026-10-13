@@ -5,6 +5,7 @@ import Agenda from './pages/agenda/Agenda'
 import Contratos from './pages/Contratos'
 import EmConstrucao from './pages/EmConstrucao'
 import Espacos from './pages/Espacos'
+import Configuracoes from './pages/configuracoes/Configuracoes'
 import CategoriasDespesa from './pages/financeiro/CategoriasDespesa'
 import Financeiro from './pages/financeiro/Financeiro'
 import Modalidades from './pages/Modalidades'
@@ -33,6 +34,7 @@ export default function App() {
             <Route path="/servicos" element={<Servicos />} />
             <Route path="/financeiro" element={<Financeiro />} />
             <Route path="/categorias-despesa" element={<CategoriasDespesa />} />
+            <Route path="/configuracoes" element={<Configuracoes />} />
             <Route path="*" element={<EmConstrucao titulo="Página não encontrada" />} />
           </Route>
         </Routes>

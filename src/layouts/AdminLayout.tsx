@@ -12,6 +12,7 @@ const menu = [
   { to: '/modalidades', label: 'Modalidades' },
   { to: '/servicos', label: 'Serviços' },
   { to: '/financeiro', label: 'Financeiro' },
+  { to: '/configuracoes', label: 'Configurações' },
 ]
 
 export default function AdminLayout() {

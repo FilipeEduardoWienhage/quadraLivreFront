@@ -47,6 +47,12 @@
   gap: 12px;
 }
 
+/* aviso de feriado ocupa a largura toda da grade de cards */
+.agenda-cartoes > .alerta {
+  grid-column: 1 / -1;
+  margin: 0;
+}
+
 .agenda-sem-resultado {
   grid-column: 1 / -1;
   margin: 0;

@@ -7,6 +7,7 @@ import type {
   DiaSemana,
   Espaco,
   FaixaPreco,
+  Feriado,
   FormaPagamento,
   Modalidade,
   Pessoa,
@@ -63,7 +64,26 @@ export const modalidades: Modalidade[] = [
   { id: 2, nome: 'Treino físico', cor: '#c05621', ativo: true },
 ]
 
-export const configuracoes: Configuracoes = { corLocacao: '#1d5aa6' }
+export const configuracoes: Configuracoes = {
+  corLocacao: '#1d5aa6',
+  funcionamento: [
+    { diaSemana: 0, aberto: true, abertura: '08:00', fechamento: '20:00' },
+    ...([1, 2, 3, 4, 5] as const).map((diaSemana) => ({
+      diaSemana,
+      aberto: true,
+      abertura: '07:00',
+      fechamento: '23:00',
+    })),
+    // sábado até 23h por causa do período noturno da churrasqueira
+    { diaSemana: 6, aberto: true, abertura: '08:00', fechamento: '23:00' },
+  ],
+}
+
+export const feriados: Feriado[] = [
+  { id: 1, data: '2026-01-01', nome: 'Confraternização Universal', anual: true, aberto: false },
+  { id: 2, data: '2026-12-25', nome: 'Natal', anual: true, aberto: false },
+  { id: 3, data: '2026-12-24', nome: 'Véspera de Natal', anual: true, aberto: true, abertura: '08:00', fechamento: '14:00' },
+]
 
 export const servicos: Servico[] = [
   { id: 1, nome: 'Locação avulsa (1h)', valor: 100, ativo: true },

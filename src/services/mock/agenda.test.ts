@@ -1,4 +1,6 @@
 import { beforeEach, describe, expect, it } from 'vitest'
+import type { Agendamento } from '../../types/models'
+import { omitir } from '../../utils/objeto'
 import type { DadosAgendamento } from '../api'
 import { novoServidor } from '../../testes/servidor'
 
@@ -81,6 +83,129 @@ describe('validações ao agendar', () => {
     expect(quebrado.dataFim).toBe(`${SEGUNDA}T21:22:00`)
     const reserva = await api.agendamentosApi.criar(locacao(5, '11:00', '16:00', 200, '2026-10-17'))
     expect(reserva.valor).toBe(200)
+  })
+})
+
+describe('horário de funcionamento', () => {
+  it('limite é o do dia: domingo fecha às 20h', async () => {
+    await expect(api.agendamentosApi.criar(locacao(2, '19:30', '20:30', 100, '2026-10-18'))).rejects.toThrow(
+      'Fora do horário de funcionamento do dia (08:00 às 20:00).',
+    )
+  })
+
+  it('feriado fechado recusa agendamento e não gera encontros de turma', async () => {
+    // segunda-feira com turma às 18h, transformada em feriado
+    await api.feriadosApi.criar({ data: '2026-10-19', nome: 'Feriado municipal', anual: false, aberto: false })
+    await expect(api.agendamentosApi.criar(locacao(2, '10:00', '11:00', 80, '2026-10-19'))).rejects.toThrow(
+      'A academia está fechada em 19/10/2026 (Feriado municipal).',
+    )
+    expect(await api.agendamentosApi.listarDoDia('2026-10-19')).toEqual([])
+  })
+
+  it('horário especial: só gera os encontros que cabem nele', async () => {
+    await api.feriadosApi.criar({ data: '2026-10-19', nome: 'Ponto facultativo', anual: false, aberto: true, abertura: '08:00', fechamento: '14:00' })
+    expect(await api.agendamentosApi.listarDoDia('2026-10-19')).toEqual([]) // a turma é às 18h
+    await expect(api.agendamentosApi.criar(locacao(2, '14:00', '15:00', 80, '2026-10-19'))).rejects.toThrow('(08:00 às 14:00)')
+  })
+
+  it('dia da semana fechado nas configurações', async () => {
+    const configuracoes = await api.configuracoesApi.buscar()
+    await api.configuracoesApi.salvar({
+      ...configuracoes,
+      funcionamento: configuracoes.funcionamento.map((h) => (h.diaSemana === 0 ? { ...h, aberto: false } : h)),
+    })
+    await expect(api.agendamentosApi.criar(locacao(2, '10:00', '11:00', 100, '2026-10-18'))).rejects.toThrow(
+      'A academia está fechada em 18/10/2026.',
+    )
+  })
+})
+
+describe('editar agendamento', () => {
+  /** Dados de envio a partir de um agendamento salvo (como o formulário faz). */
+  const paraDados = (a: Agendamento): DadosAgendamento => ({
+    ...omitir(a, 'id', 'status', 'participantes', 'dataOriginal'),
+    participantes: a.participantes.map((p) => omitir(p, 'id', 'presenca')),
+  })
+  const cobrancaDaLocacao = async (id: number) =>
+    (await api.transacoesApi.listar()).find((t) => t.movimentos.some((m) => m.agendamentoId === id))!
+
+  it('mudar horário e valor da locação atualiza a cobrança em aberto', async () => {
+    const locacao1 = await api.agendamentosApi.atualizar(1, {
+      ...paraDados(await api.agendamentosApi.listarDoDia(SEGUNDA).then((d) => d[0])),
+      dataInicio: `${SEGUNDA}T09:00:00`,
+      dataFim: `${SEGUNDA}T10:30:00`,
+      valor: 120,
+    })
+    expect(locacao1.dataInicio).toBe(`${SEGUNDA}T09:00:00`)
+    const cobranca = await cobrancaDaLocacao(1)
+    expect(cobranca.valorTotal).toBe(120)
+    expect(cobranca.movimentos[0].descricao).toBe('Locação Quadra 1 — 12/10/2026 09:00–10:30')
+  })
+
+  it('salvar sem mudar o horário não conflita com o próprio agendamento', async () => {
+    const original = await api.agendamentosApi.listarDoDia(SEGUNDA).then((d) => d.find((a) => a.id === 1)!)
+    const salvo = await api.agendamentosApi.atualizar(1, { ...paraDados(original), observacao: 'cliente pediu raquete' })
+    expect(salvo.observacao).toBe('cliente pediu raquete')
+  })
+
+  it('cobrança paga trava valor e responsável, mas não o horário', async () => {
+    const original = await api.agendamentosApi.listarDoDia(SEGUNDA).then((d) => d.find((a) => a.id === 1)!)
+    await api.transacoesApi.registrarPagamento((await cobrancaDaLocacao(1)).id, { formaPagamentoId: 1, dataPagamento: SEGUNDA })
+
+    await expect(api.agendamentosApi.atualizar(1, { ...paraDados(original), valor: 60 })).rejects.toThrow('já foi paga')
+    const remarcada = await api.agendamentosApi.atualizar(1, {
+      ...paraDados(original),
+      dataInicio: `${SEGUNDA}T11:00:00`,
+      dataFim: `${SEGUNDA}T12:00:00`,
+    })
+    expect(remarcada.dataInicio).toBe(`${SEGUNDA}T11:00:00`)
+  })
+
+  it('participantes que continuam mantêm a presença; quem entra começa pendente', async () => {
+    const aula = await api.agendamentosApi.listarDoDia(SEGUNDA).then((d) => d.find((a) => a.id === 3)!)
+    const bruno = aula.participantes.find((p) => p.pessoaId === 4)!
+    await api.agendamentosApi.registrarPresenca(3, bruno.id, 'PRESENTE')
+
+    const dados = paraDados(aula)
+    const salva = await api.agendamentosApi.atualizar(3, {
+      ...dados,
+      participantes: [...dados.participantes, { pessoaId: 3, papel: 'ALUNO', contratoItemId: 1 }],
+    })
+    expect(salva.participantes.map((p) => [p.pessoaId, p.presenca])).toEqual([
+      [1, 'PENDENTE'],
+      [4, 'PRESENTE'],
+      [3, 'PENDENTE'],
+    ])
+  })
+
+  it('encontro de turma remarcado não nasce de novo no horário antigo', async () => {
+    const turma = (await api.agendamentosApi.listarDoDia(SEGUNDA)).find((a) => a.tipo === 'AULA_TURMA')!
+    const remarcado = await api.agendamentosApi.atualizar(turma.id, {
+      ...paraDados(turma),
+      espacoId: 2,
+      dataInicio: `${SEGUNDA}T19:00:00`,
+      dataFim: `${SEGUNDA}T20:00:00`,
+    })
+    expect(remarcado.dataOriginal).toBe(`${SEGUNDA}T18:00:00`)
+    const turmas = (await api.agendamentosApi.listarDoDia(SEGUNDA)).filter((a) => a.tipo === 'AULA_TURMA')
+    expect(turmas.map((a) => a.dataInicio)).toEqual([`${SEGUNDA}T19:00:00`])
+  })
+
+  it('o tipo não muda e cancelado não é editável', async () => {
+    const original = await api.agendamentosApi.listarDoDia(SEGUNDA).then((d) => d.find((a) => a.id === 1)!)
+    await expect(api.agendamentosApi.atualizar(1, { ...paraDados(original), tipo: 'AULA' })).rejects.toThrow(
+      'O tipo do agendamento não pode mudar',
+    )
+    await api.agendamentosApi.cancelar(1, 'teste')
+    await expect(api.agendamentosApi.atualizar(1, paraDados(original))).rejects.toThrow('cancelado não pode ser alterado')
+  })
+
+  it('edição respeita conflitos com outros agendamentos', async () => {
+    const original = await api.agendamentosApi.listarDoDia(SEGUNDA).then((d) => d.find((a) => a.id === 1)!)
+    // a turma das 18h está na Quadra 1
+    await expect(
+      api.agendamentosApi.atualizar(1, { ...paraDados(original), dataInicio: `${SEGUNDA}T18:30:00`, dataFim: `${SEGUNDA}T19:30:00` }),
+    ).rejects.toThrow('Já existe agendamento em Quadra 1 das 18:00 às 19:00.')
   })
 })
 

@@ -16,10 +16,21 @@ interface Props {
   planoPorId: Map<Id, Plano>
   /** 'YYYY-MM-DD': a cota mensal é contada na semana desta data */
   data: string
+  /** na edição: participantes já salvos nesta aula (a cota deles já inclui esta aula) */
+  jaNaAula?: { pessoaId: Id; contratoItemId?: Id }[]
 }
 
 /** Alunos de uma aula, cada um com o contrato que paga e o uso da cota. */
-export default function AlunosDaAula({ alunos, onChange, pessoas, professorId, itemDoAluno, planoPorId, data }: Props) {
+export default function AlunosDaAula({
+  alunos,
+  onChange,
+  pessoas,
+  professorId,
+  itemDoAluno,
+  planoPorId,
+  data,
+  jaNaAula = [],
+}: Props) {
   const nome = new Map(pessoas.map((p) => [p.id, p.nome]))
   const disponiveis = pessoas.filter((p) => p.aluno && !alunos.includes(p.id) && p.id !== professorId)
 
@@ -36,6 +47,7 @@ export default function AlunosDaAula({ alunos, onChange, pessoas, professorId, i
               item={item}
               plano={item && planoPorId.get(item.planoId)}
               data={data}
+              jaContada={jaNaAula.some((p) => p.pessoaId === alunoId && p.contratoItemId === item?.id)}
               onRemover={() => onChange(alunos.filter((id) => id !== alunoId))}
             />
           )
@@ -57,11 +69,13 @@ interface LinhaAlunoProps {
   item?: ContratoItem
   plano?: Plano
   data: string
+  /** esta aula já está no uso da cota (edição): esgota só se passar do limite */
+  jaContada: boolean
   onRemover: () => void
 }
 
 /** Aluno da aula com o contrato que paga e o uso da cota. */
-function LinhaAluno({ nome, item, plano, data, onRemover }: LinhaAlunoProps) {
+function LinhaAluno({ nome, item, plano, data, jaContada, onRemover }: LinhaAlunoProps) {
   const [cota, setCota] = useState<Cota | null>(null)
   const itemId = item?.id
 
@@ -79,7 +93,8 @@ function LinhaAluno({ nome, item, plano, data, onRemover }: LinhaAlunoProps) {
     }
   }, [itemId, data])
 
-  const estourou = cota !== null && cota.usadas >= cota.limite
+  // aula nova precisa de vaga (usadas < limite); aula já contada só estoura se passar do limite
+  const estourou = cota !== null && (jaContada ? cota.usadas > cota.limite : cota.usadas >= cota.limite)
   const usoCota =
     cota && `${cota.usadas}/${cota.limite} ${cota.periodo === 'SEMANA' ? 'nesta semana' : 'usadas do pacote'}`
 

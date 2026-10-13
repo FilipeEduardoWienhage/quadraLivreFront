@@ -97,3 +97,9 @@
 .painel-dia-participantes .controle {
   width: auto;
 }
+
+.painel-dia-acoes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}

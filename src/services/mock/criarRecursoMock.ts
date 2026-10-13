@@ -8,7 +8,7 @@ const LATENCIA_MS = import.meta.env.MODE === 'test' ? 0 : 250
  * Aumente a versão ao mudar o formato dos dados mock: o que estiver salvo
  * no navegador com a versão antiga é ignorado e os dados iniciais voltam.
  */
-const VERSAO = 9
+const VERSAO = 10
 const PREFIXO = `quadralivre:mock:v${VERSAO}:`
 
 function esperar() {

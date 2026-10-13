@@ -69,8 +69,8 @@ export interface ConfiguracoesApi {
 /** Presença começa PENDENTE no servidor. */
 type DadosParticipante = Omit<ParticipanteAgendamento, 'id' | 'presenca'>
 
-/** Status começa AGENDADO no servidor. */
-export type DadosAgendamento = Omit<Agendamento, 'id' | 'status' | 'participantes'> & {
+/** Status começa AGENDADO no servidor; dataOriginal é controlada por ele. */
+export type DadosAgendamento = Omit<Agendamento, 'id' | 'status' | 'participantes' | 'dataOriginal'> & {
   participantes: DadosParticipante[]
 }
 
@@ -86,6 +86,12 @@ export interface AgendamentosApi {
   listarDoDia(data: string): Promise<Agendamento[]>
   /** POST /agendamentos — valida conflitos; LOCACAO já nasce com a cobrança */
   criar(dados: DadosAgendamento): Promise<Agendamento>
+  /**
+   * PUT /agendamentos/{id} — mesmas validações da criação (ignorando o próprio agendamento).
+   * O tipo não muda; participantes que continuam mantêm a presença; LOCACAO atualiza a cobrança
+   * em aberto (e recusa mudar valor ou responsável se ela já foi paga).
+   */
+  atualizar(id: Id, dados: DadosAgendamento): Promise<Agendamento>
   /** POST /agendamentos/{id}/cancelamento — LOCACAO cancela junto a cobrança em aberto */
   cancelar(id: Id, motivo: string): Promise<Agendamento>
   /** PUT /agendamentos/{id}/participantes/{participanteId}/presenca */

@@ -1,7 +1,5 @@
-// Configurações da academia. Candidatas a uma tela de configurações quando o backend existir.
-
-/** Horário de funcionamento: limites da agenda. */
-export const FUNCIONAMENTO = { abertura: '07:00', fechamento: '23:00' }
+// Constantes de interface. O que a academia configura (horário de funcionamento, feriados,
+// cores) fica nas Configurações, salvas pela API.
 
 /**
  * Fatia da grade da agenda, em minutos: só para visualizar e clicar em horários livres.

@@ -5,6 +5,7 @@ export {
   categoriasDespesaApi,
   configuracoesApi,
   espacosApi,
+  feriadosApi,
   formasPagamentoApi,
   modalidadesApi,
   pessoasApi,

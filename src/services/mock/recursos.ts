@@ -5,6 +5,7 @@ import type {
   Configuracoes,
   Contrato,
   Espaco,
+  Feriado,
   FormaPagamento,
   Id,
   Modalidade,
@@ -29,6 +30,7 @@ export const modalidadesApi = criarRecursoMock<Modalidade>('modalidades', dados.
 export const servicosApi = criarRecursoMock<Servico>('servicos', dados.servicos)
 export const formasPagamentoApi = criarRecursoMock<FormaPagamento>('formasPagamento', dados.formasPagamento)
 export const categoriasDespesaApi = criarRecursoMock<CategoriaDespesa>('categoriasDespesa', dados.categoriasDespesa)
+export const feriadosApi = criarRecursoMock<Feriado>('feriados', dados.feriados)
 export const planosApi = criarRecursoMock<Plano>('planos', dados.planos)
 export const turmasApi = criarRecursoMock<Turma>('turmas', dados.turmas)
 export const turmasAlunosApi = criarRecursoMock<TurmaAluno>('turmasAlunos', dados.turmasAlunos)

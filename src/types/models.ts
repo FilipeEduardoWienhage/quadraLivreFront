@@ -78,10 +78,37 @@ export interface Modalidade {
   ativo: boolean
 }
 
+/** Funcionamento de um dia da semana. Fechado: abertura e fechamento são ignorados. */
+export interface HorarioFuncionamento {
+  diaSemana: DiaSemana
+  aberto: boolean
+  /** 'HH:mm' */
+  abertura: string
+  /** 'HH:mm' */
+  fechamento: string
+}
+
+/** Data em que o funcionamento foge da semana: fechado ou com horário especial. */
+export interface Feriado {
+  id: Id
+  /** 'YYYY-MM-DD'; se anual, só o dia e o mês importam */
+  data: string
+  nome: string
+  /** repete todo ano na mesma data (ex.: Natal) */
+  anual: boolean
+  aberto: boolean
+  /** 'HH:mm', só quando aberto */
+  abertura?: string
+  /** 'HH:mm', só quando aberto */
+  fechamento?: string
+}
+
 /** Configurações gerais da academia (registro único). */
 export interface Configuracoes {
   /** '#RRGGBB': cor das locações e reservas na agenda */
   corLocacao: string
+  /** um item por dia da semana (0 = domingo … 6 = sábado) */
+  funcionamento: HorarioFuncionamento[]
 }
 
 export interface Servico {
@@ -182,6 +209,8 @@ export interface Agendamento {
   dataFim: string
   /** LOCACAO: valor combinado (sugerido pela tabela de preços, editável para desconto) */
   valor?: number
+  /** AULA_TURMA remarcado: início previsto pelos horários da turma (evita gerar o encontro de novo) */
+  dataOriginal?: string
   status: StatusAgendamento
   observacao?: string
   /** linhas de participantes_agendamento; trafegam junto com o agendamento */

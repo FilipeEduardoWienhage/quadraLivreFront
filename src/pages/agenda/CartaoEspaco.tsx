@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react'
-import { FUNCIONAMENTO, INTERVALO_AGENDA_MIN } from '../../config'
+import { INTERVALO_AGENDA_MIN } from '../../config'
 import type { Agendamento, Espaco, Id } from '../../types/models'
 import { pluralizar } from '../../utils/formatar'
 import { minutos, paraHora } from '../../utils/horarios'
@@ -13,17 +13,11 @@ const PX_POR_MIN = 1.2
 /** Abaixo desta altura o bloco mostra só uma linha. */
 const ALTURA_COMPACTA = 46
 
-const ABERTURA = minutos(FUNCIONAMENTO.abertura)
-const FECHAMENTO = minutos(FUNCIONAMENTO.fechamento)
-const FATIAS = Array.from(
-  { length: (FECHAMENTO - ABERTURA) / INTERVALO_AGENDA_MIN },
-  (_, i) => ABERTURA + i * INTERVALO_AGENDA_MIN,
-)
-
-const px = (minutoDoDia: number) => (minutoDoDia - ABERTURA) * PX_POR_MIN
-
 interface Props {
   espaco: Espaco
+  /** funcionamento do dia, em minutos desde 00:00 */
+  abertura: number
+  fechamento: number
   /** agendamentos do espaço no dia, sem os cancelados */
   agendamentos: Agendamento[]
   nomes: Nomes
@@ -41,6 +35,8 @@ const contar = (n: number) => (n === 0 ? 'Nenhum agendamento' : pluralizar(n, 'a
 
 export default function CartaoEspaco({
   espaco,
+  abertura,
+  fechamento,
   agendamentos,
   nomes,
   corDe,
@@ -53,10 +49,17 @@ export default function CartaoEspaco({
   const linhaDoTempo = useRef<HTMLDivElement>(null)
   const disponivel = espaco.status === 'ATIVO'
 
+  const px = (minutoDoDia: number) => (minutoDoDia - abertura) * PX_POR_MIN
+  // a grade começa na abertura, mesmo que ela não seja hora cheia (ex.: 08:15)
+  const fatias = Array.from(
+    { length: Math.ceil((fechamento - abertura) / INTERVALO_AGENDA_MIN) },
+    (_, i) => abertura + i * INTERVALO_AGENDA_MIN,
+  )
+
   useEffect(() => {
     // deixa meia hora de contexto acima do horário de interesse
-    linhaDoTempo.current?.scrollTo({ top: Math.max(0, px(rolarPara - 30)) })
-  }, [rolarPara])
+    linhaDoTempo.current?.scrollTo({ top: Math.max(0, (rolarPara - 30 - abertura) * PX_POR_MIN) })
+  }, [rolarPara, abertura])
 
   const intervalo = (a: Agendamento) => [minutos(hora(a.dataInicio)), minutos(hora(a.dataFim))] as const
   const ocupado = (fatia: number) =>
@@ -76,11 +79,13 @@ export default function CartaoEspaco({
     ? { texto: espaco.status === 'MANUTENCAO' ? 'Em manutenção' : 'Inativo', tom: 'indisponivel' }
     : emUso
       ? { texto: `Em uso até ${hora(emUso.dataFim)}`, tom: 'em-uso' }
-      : minutoAtual !== null
-        ? { texto: 'Livre agora', tom: 'livre' }
-        : null
+      : minutoAtual === null
+        ? null
+        : minutoAtual < abertura || minutoAtual >= fechamento
+          ? { texto: 'Fora do horário', tom: 'indisponivel' }
+          : { texto: 'Livre agora', tom: 'livre' }
 
-  const agoraVisivel = minutoAtual !== null && minutoAtual > ABERTURA && minutoAtual < FECHAMENTO
+  const agoraVisivel = minutoAtual !== null && minutoAtual > abertura && minutoAtual < fechamento
 
   return (
     <section className={`cartao-espaco${disponivel ? '' : ' cartao-espaco-indisponivel'}`} aria-label={espaco.nome}>
@@ -93,17 +98,19 @@ export default function CartaoEspaco({
       </header>
 
       <div className="cartao-espaco-linha" ref={linhaDoTempo}>
-        <div className="cartao-espaco-dia" style={{ height: px(FECHAMENTO) }}>
-          {FATIAS.map((fatia) => {
+        <div className="cartao-espaco-dia" style={{ height: px(fechamento) }}>
+          {fatias.map((fatia) => {
             const horaFatia = paraHora(fatia)
             const passou = minutoAtual !== null && fatia + INTERVALO_AGENDA_MIN <= minutoAtual
+            // rótulo nas horas cheias e na abertura, se ela for quebrada
+            const rotulo = fatia % 60 === 0 || fatia === abertura
             return (
               <div
                 key={fatia}
-                className={`cartao-espaco-fatia${fatia % 60 === 0 ? ' cartao-espaco-hora-cheia' : ''}`}
+                className={`cartao-espaco-fatia${rotulo ? ' cartao-espaco-hora-cheia' : ''}`}
                 style={{ height: INTERVALO_AGENDA_MIN * PX_POR_MIN }}
               >
-                {fatia % 60 === 0 && <span className="cartao-espaco-rotulo">{horaFatia}</span>}
+                {rotulo && <span className="cartao-espaco-rotulo">{horaFatia}</span>}
                 {disponivel && !passou && !ocupado(fatia) && (
                   <button
                     type="button"
@@ -118,8 +125,8 @@ export default function CartaoEspaco({
             )
           })}
 
-          {minutoAtual !== null && minutoAtual > ABERTURA && (
-            <div className="cartao-espaco-passado" style={{ height: px(Math.min(minutoAtual, FECHAMENTO)) }} />
+          {minutoAtual !== null && minutoAtual > abertura && (
+            <div className="cartao-espaco-passado" style={{ height: px(Math.min(minutoAtual, fechamento)) }} />
           )}
 
           {agendamentos.map((a) => {

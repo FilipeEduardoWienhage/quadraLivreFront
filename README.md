@@ -46,7 +46,7 @@ npm run test:e2e   # testes de ponta a ponta (Playwright)
 
 | Tela | O que faz |
 |---|---|
-| Agenda | Um card por espaço com a linha do tempo do dia; locações (valor pela tabela de preços), aulas (com cota do contrato) e encontros de turma; presença e cancelamento |
+| Agenda | Um card por espaço com a linha do tempo do dia; locações (valor pela tabela de preços), aulas (com cota do contrato) e encontros de turma; edição (e remarcação de encontros), presença e cancelamento |
 | Pessoas | Cadastro único com papéis acumuláveis (aluno, professor); sem papel = cliente |
 | Turmas | Horários semanais, professor, local e entrada/saída de alunos com histórico |
 | Planos | O que a academia vende, por modalidade (pacote ou mensal) |
@@ -55,6 +55,7 @@ npm run test:e2e   # testes de ponta a ponta (Playwright)
 | Modalidades | Tênis, treino físico… com a cor usada na agenda |
 | Serviços | Itens avulsos cobráveis |
 | Financeiro | Contas a receber e a pagar, geração de mensalidades, pagamento e cancelamento |
+| Configurações | Horário de funcionamento por dia da semana e feriados (fechado ou horário especial) |
 
 ## Estrutura
 
@@ -70,7 +71,7 @@ src/
   hooks/                 useRecurso (lista + salvar/excluir), useEdicao (modal de cadastro)…
   pages/                 uma pasta/arquivo por tela
   utils/                 funções puras: datas, horários, preços, formatação
-  config.ts              horário de funcionamento e grade da agenda
+  config.ts              constantes de interface (grade da agenda)
 ```
 
 ## Dados mock

@@ -1,14 +1,16 @@
 import { useState } from 'react'
-import { AreaTexto, Botao, Campo, Entrada, LinhaCampos, ModalFormulario, Selecao } from '../../components'
-import { FUNCIONAMENTO } from '../../config'
+import { Alerta, AreaTexto, Botao, Campo, Entrada, LinhaCampos, ModalFormulario, Selecao } from '../../components'
 import type { DadosAgendamento } from '../../services'
-import type { Contrato, Espaco, Id, Modalidade, Pessoa, Plano, TipoAgendamento } from '../../types/models'
+import type { Agendamento, Contrato, Espaco, Id, Modalidade, Pessoa, Plano, TipoAgendamento } from '../../types/models'
 import { diaDaSemana } from '../../utils/data'
 import { formatarMoeda } from '../../utils/formatar'
+import type { Funcionamento } from '../../utils/funcionamento'
 import { minutos, paraHora } from '../../utils/horarios'
 import { paraOpcao } from '../../utils/opcoes'
 import { calcularValorLocacao, periodosDoDia } from '../../utils/precos'
+import { omitir } from '../../utils/objeto'
 import AlunosDaAula from './AlunosDaAula'
+import { hora, tiposAgendamento } from './descricao'
 
 export interface InicialAgendamento {
   espacoId: Id
@@ -18,11 +20,15 @@ export interface InicialAgendamento {
 
 interface Props {
   inicial: InicialAgendamento
+  /** presente = edição deste agendamento */
+  agendamento?: Agendamento
   espacos: Espaco[]
   pessoas: Pessoa[]
   modalidades: Modalidade[]
   contratos: Contrato[]
   planos: Plano[]
+  /** funcionamento da academia numa data; null enquanto as configurações carregam */
+  funcionamentoDe: (data: string) => Funcionamento | null
   onSalvar: (dados: DadosAgendamento) => Promise<void>
   onFechar: () => void
 }
@@ -32,35 +38,65 @@ const opcoesTipo: { valor: Exclude<TipoAgendamento, 'AULA_TURMA'>; rotulo: strin
   { valor: 'AULA', rotulo: 'Aula' },
 ]
 
-const umaHoraDepois = (horaInicio: string) =>
-  paraHora(Math.min(minutos(horaInicio) + 60, minutos(FUNCIONAMENTO.fechamento)))
+/** Uma hora depois, sem passar do fechamento (quando conhecido). */
+const umaHoraDepois = (horaInicio: string, fechamento = '23:59') =>
+  paraHora(Math.min(minutos(horaInicio) + 60, minutos(fechamento)))
 
-/** Encontros de turma não passam por aqui: nascem dos horários da turma. */
+/** Texto de ajuda do campo de data: como a academia funciona no dia escolhido. */
+function descreverFuncionamento(f: Funcionamento | null) {
+  if (!f) return undefined
+  if (!f.aberto) return `Academia fechada nesta data${f.feriado ? ` (${f.feriado})` : ''}.`
+  return `${f.feriado ? `${f.feriado}: horário especial` : 'Funcionamento'} das ${f.abertura} às ${f.fechamento}.`
+}
+
+/**
+ * Cria locações e aulas, e edita qualquer agendamento (inclusive remarcar um encontro de turma).
+ * Encontros de turma não são criados aqui: nascem dos horários da turma.
+ */
 export default function ModalAgendamento({
   inicial,
+  agendamento,
   espacos,
   pessoas,
   modalidades,
   contratos,
   planos,
+  funcionamentoDe,
   onSalvar,
   onFechar,
 }: Props) {
   const espacoInicial = espacos.find((e) => e.id === inicial.espacoId)
-  const [tipo, setTipo] = useState<'LOCACAO' | 'AULA'>(espacoInicial?.locacao === 'NAO' ? 'AULA' : 'LOCACAO')
+  const professorAtual = agendamento?.participantes.find((p) => p.papel === 'PROFESSOR')
+
+  const [tipo, setTipo] = useState<TipoAgendamento>(
+    agendamento?.tipo ?? (espacoInicial?.locacao === 'NAO' ? 'AULA' : 'LOCACAO'),
+  )
   const [espacoId, setEspacoId] = useState(inicial.espacoId)
   const [data, setData] = useState(inicial.data)
   const [horaInicio, setHoraInicio] = useState(inicial.horaInicio)
-  const [horaFim, setHoraFim] = useState(umaHoraDepois(inicial.horaInicio))
-  const [observacao, setObservacao] = useState('')
+  const [horaFim, setHoraFim] = useState(() => {
+    if (agendamento) return hora(agendamento.dataFim)
+    const funcionamento = funcionamentoDe(inicial.data)
+    return umaHoraDepois(inicial.horaInicio, funcionamento?.aberto ? funcionamento.fechamento : undefined)
+  })
+  const [observacao, setObservacao] = useState(agendamento?.observacao ?? '')
   // locação
-  const [pessoaId, setPessoaId] = useState('')
+  const [pessoaId, setPessoaId] = useState(agendamento?.pessoaId ? String(agendamento.pessoaId) : '')
   /** null = usa o valor da tabela; número = valor negociado pelo gestor */
-  const [valorNegociado, setValorNegociado] = useState<number | null>(null)
+  const [valorNegociado, setValorNegociado] = useState<number | null>(() => {
+    if (agendamento?.valor === undefined || !espacoInicial) return null
+    // valor igual ao da tabela na época: continua acompanhando a tabela se o horário mudar
+    const tabela = calcularValorLocacao(espacoInicial, diaDaSemana(inicial.data), inicial.horaInicio, hora(agendamento.dataFim))
+    return 'valor' in tabela && tabela.valor === agendamento.valor ? null : agendamento.valor
+  })
   // aula
-  const [modalidadeId, setModalidadeId] = useState('')
-  const [professorId, setProfessorId] = useState('')
-  const [alunos, setAlunos] = useState<Id[]>([])
+  const [modalidadeId, setModalidadeId] = useState(agendamento?.modalidadeId ? String(agendamento.modalidadeId) : '')
+  const [professorId, setProfessorId] = useState(professorAtual ? String(professorAtual.pessoaId) : '')
+  const [alunos, setAlunos] = useState<Id[]>(
+    agendamento?.participantes.filter((p) => p.papel === 'ALUNO').map((p) => p.pessoaId) ?? [],
+  )
+  const editando = agendamento !== undefined
+  const turma = tipo === 'AULA_TURMA'
 
   const espaco = espacos.find((e) => e.id === espacoId)
   const planoPorId = new Map(planos.map((p) => [p.id, p]))
@@ -78,9 +114,11 @@ export default function ModalAgendamento({
       .flatMap((c) => c.itens)
       .find((i) => planoPorId.get(i.planoId)?.modalidadeId === Number(modalidadeId))
 
-  // locação: espaços alugáveis; aula: qualquer espaço disponível
+  // locação: espaços alugáveis; aula e turma: qualquer espaço disponível (e o atual, na edição)
   const opcoesEspaco = espacos
-    .filter((e) => e.status === 'ATIVO' && (tipo === 'AULA' || e.locacao !== 'NAO'))
+    .filter(
+      (e) => (e.status === 'ATIVO' || e.id === agendamento?.espacoId) && (tipo !== 'LOCACAO' || e.locacao !== 'NAO'),
+    )
     .map(paraOpcao)
 
   const porPeriodo = tipo === 'LOCACAO' && espaco?.locacao === 'POR_PERIODO'
@@ -90,6 +128,10 @@ export default function ModalAgendamento({
   const valor = valorNegociado ?? valorTabela
 
   const responsavelAluno = pessoaId !== '' && contratosNaData(Number(pessoaId)).length > 0
+
+  const funcionamento = funcionamentoDe(data)
+  // limites dos campos de hora; em dia fechado ficam livres (o servidor recusa com a mensagem do motivo)
+  const limite = funcionamento?.aberto ? funcionamento : undefined
 
   function salvar() {
     const base = {
@@ -101,6 +143,15 @@ export default function ModalAgendamento({
     if (tipo === 'LOCACAO') {
       if (valor === undefined) throw new Error(preco && 'erro' in preco ? preco.erro : 'Informe o valor.')
       return onSalvar({ ...base, tipo, pessoaId: Number(pessoaId), valor, participantes: [] })
+    }
+    if (tipo === 'AULA_TURMA') {
+      // remarcar um encontro: os participantes continuam os da turma
+      return onSalvar({
+        ...base,
+        tipo,
+        turmaId: agendamento?.turmaId,
+        participantes: agendamento?.participantes.map((p) => omitir(p, 'id', 'presenca')) ?? [],
+      })
     }
     if (alunos.length === 0) throw new Error('Inclua ao menos um aluno.')
     return onSalvar({
@@ -117,16 +168,31 @@ export default function ModalAgendamento({
   return (
     <ModalFormulario
       aberto
-      titulo="Novo agendamento"
-      textoSalvar="Agendar"
-      mensagemSucesso={tipo === 'LOCACAO' ? 'Locação agendada e cobrança lançada.' : 'Aula agendada.'}
+      titulo={!editando ? 'Novo agendamento' : turma ? 'Remarcar encontro da turma' : 'Editar agendamento'}
+      textoSalvar={editando ? 'Salvar alterações' : 'Agendar'}
+      mensagemSucesso={
+        editando
+          ? 'Agendamento atualizado.'
+          : tipo === 'LOCACAO'
+            ? 'Locação agendada e cobrança lançada.'
+            : 'Aula agendada.'
+      }
       largura="grande"
       onFechar={onFechar}
       onSalvar={salvar}
     >
+      {turma && (
+        <Alerta tipo="info">
+          Remarca só este encontro. Os alunos e o horário fixo continuam os da turma.
+        </Alerta>
+      )}
       <LinhaCampos>
-        <Campo rotulo="Tipo" obrigatorio>
-          <Selecao opcoes={opcoesTipo} value={tipo} onChange={(e) => setTipo(e.target.value as 'LOCACAO' | 'AULA')} />
+        <Campo rotulo="Tipo" ajuda={editando && !turma ? 'O tipo não muda: para trocar, cancele e crie outro.' : undefined}>
+          {editando ? (
+            <Entrada value={tiposAgendamento[tipo]} readOnly />
+          ) : (
+            <Selecao opcoes={opcoesTipo} value={tipo} onChange={(e) => setTipo(e.target.value as TipoAgendamento)} />
+          )}
         </Campo>
         <Campo rotulo="Local" obrigatorio>
           <Selecao
@@ -137,7 +203,7 @@ export default function ModalAgendamento({
             required
           />
         </Campo>
-        <Campo rotulo="Data" obrigatorio>
+        <Campo rotulo="Data" ajuda={descreverFuncionamento(funcionamento)} obrigatorio>
           <Entrada type="date" value={data} onChange={(e) => setData(e.target.value)} required />
         </Campo>
       </LinhaCampos>
@@ -164,12 +230,12 @@ export default function ModalAgendamento({
           <Campo rotulo="Início" obrigatorio>
             <Entrada
               type="time"
-              min={FUNCIONAMENTO.abertura}
-              max={FUNCIONAMENTO.fechamento}
+              min={limite?.abertura}
+              max={limite?.fechamento}
               value={horaInicio}
               onChange={(e) => {
                 setHoraInicio(e.target.value)
-                if (e.target.value >= horaFim) setHoraFim(umaHoraDepois(e.target.value))
+                if (e.target.value >= horaFim) setHoraFim(umaHoraDepois(e.target.value, limite?.fechamento))
               }}
               required
             />
@@ -178,7 +244,7 @@ export default function ModalAgendamento({
             <Entrada
               type="time"
               min={horaInicio}
-              max={FUNCIONAMENTO.fechamento}
+              max={limite?.fechamento}
               value={horaFim}
               onChange={(e) => setHoraFim(e.target.value)}
               required
@@ -230,7 +296,7 @@ export default function ModalAgendamento({
             />
           </Campo>
         </LinhaCampos>
-      ) : (
+      ) : turma ? null : (
         <>
           <LinhaCampos>
             <Campo rotulo="Modalidade" obrigatorio>
@@ -245,7 +311,10 @@ export default function ModalAgendamento({
             <Campo rotulo="Professor" obrigatorio>
               <Selecao
                 placeholder="Selecione…"
-                opcoes={ativos.filter((p) => p.professor).map(paraOpcao)}
+                // inativos saem das opções, exceto o professor atual da aula, na edição
+                opcoes={pessoas
+                  .filter((p) => (p.ativo && p.professor) || p.id === professorAtual?.pessoaId)
+                  .map(paraOpcao)}
                 value={professorId}
                 onChange={(e) => setProfessorId(e.target.value)}
                 required
@@ -260,6 +329,7 @@ export default function ModalAgendamento({
             itemDoAluno={itemDoAluno}
             planoPorId={planoPorId}
             data={data}
+            jaNaAula={agendamento?.participantes}
           />
         </>
       )}

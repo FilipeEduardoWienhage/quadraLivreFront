@@ -24,6 +24,7 @@ interface Props {
   carregando: boolean
   onSelecionar: (agendamento: Agendamento | null) => void
   onPresenca: (agendamento: Agendamento, participanteId: Id, presenca: Presenca) => void
+  onEditar: (agendamento: Agendamento) => void
   onCancelar: (agendamento: Agendamento) => void
 }
 
@@ -36,6 +37,7 @@ export default function PainelDia({
   carregando,
   onSelecionar,
   onPresenca,
+  onEditar,
   onCancelar,
 }: Props) {
   if (selecionado) {
@@ -99,9 +101,14 @@ export default function PainelDia({
         )}
 
         {!cancelado && (
-          <Botao variante="perigo" onClick={() => onCancelar(a)}>
-            Cancelar agendamento
-          </Botao>
+          <div className="painel-dia-acoes">
+            <Botao variante="secundario" onClick={() => onEditar(a)}>
+              {a.tipo === 'AULA_TURMA' ? 'Remarcar' : 'Editar'}
+            </Botao>
+            <Botao variante="perigo" onClick={() => onCancelar(a)}>
+              Cancelar agendamento
+            </Botao>
+          </div>
         )}
       </aside>
     )

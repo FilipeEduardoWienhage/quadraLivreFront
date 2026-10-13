@@ -1,0 +1,68 @@
+.configuracoes-secao {
+  margin-bottom: 20px;
+  padding: 18px 20px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+}
+
+.configuracoes-secao h2 {
+  margin: 0;
+  font-size: 1.0625rem;
+}
+
+.configuracoes-secao-descricao {
+  margin: 4px 0 16px;
+  color: var(--text-muted);
+  font-size: 0.875rem;
+}
+
+.configuracoes-secao-acoes {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 12px;
+}
+
+/* ---------- horário da semana ---------- */
+
+.horario-semana {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.horario-semana-dia {
+  display: grid;
+  grid-template-columns: 110px 90px 120px auto 120px;
+  /* sem isto a coluna "auto" (do "às") estica e empurra o fechamento para a direita */
+  justify-content: start;
+  align-items: center;
+  gap: 10px;
+}
+
+.horario-semana-dia.fechado strong {
+  color: var(--text-muted);
+}
+
+.horario-semana-dia .controle:disabled {
+  opacity: 0.45;
+}
+
+.horario-semana-ate {
+  color: var(--text-muted);
+  font-size: 0.875rem;
+}
+
+.horario-semana-acoes {
+  margin-top: 12px;
+}
+
+@media (max-width: 560px) {
+  .horario-semana-dia {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .horario-semana-ate {
+    display: none;
+  }
+}

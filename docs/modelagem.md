@@ -67,13 +67,40 @@ Atividades oferecidas: Tênis, Treino físico… Planos, turmas e aulas pertence
 | ativo_mod | booleano | |
 
 ### configuracoes
-Registro único com as configurações gerais da academia. Candidatos a vir para cá depois:
-horário de funcionamento (hoje fixo no front, 07:00–23:00).
+Registro único com as configurações gerais da academia. Na API, trafega junto com o
+horário de funcionamento da semana (`horarios_funcionamento`).
 
 | campo | tipo | obs |
 |---|---|---|
 | codigo_cfg | PK | sempre 1 |
 | cor_locacao_cfg | texto '#RRGGBB' | cor das locações/reservas na agenda |
+
+### horarios_funcionamento
+Funcionamento de cada dia da semana (7 linhas, inclui o fim de semana).
+
+| campo | tipo | obs |
+|---|---|---|
+| dia_semana_hfu | inteiro (PK) | 0 = domingo … 6 = sábado |
+| aberto_hfu | booleano | fechado: abertura/fechamento ignorados |
+| abertura_hfu | hora | |
+| fechamento_hfu | hora | depois da abertura |
+
+### feriados
+Datas em que o funcionamento foge da semana: fechado ou com horário especial.
+
+| campo | tipo | obs |
+|---|---|---|
+| codigo_fer | PK | |
+| data_fer | data | se anual, só dia e mês importam |
+| nome_fer | texto | |
+| anual_fer | booleano | repete todo ano (Natal, Tiradentes…) |
+| aberto_fer | booleano | |
+| abertura_fer | hora | só quando aberto |
+| fechamento_fer | hora | só quando aberto |
+
+**Funcionamento de uma data:** feriado de data específica > feriado anual > horário da semana.
+Agendamentos fora do funcionamento do dia (ou em dia fechado) são recusados, e os encontros de
+turma não são gerados em dia fechado (num horário especial, só os que cabem nele).
 
 ### precos_espacos
 (antiga `precos_quadras`) Faixas de preço de locação por espaço e dia da semana. O significado
@@ -228,8 +255,16 @@ Cada ocupação de um espaço em um horário: locação, aula marcada ou encontr
 | data_inicio_age | data/hora | |
 | data_fim_age | data/hora | |
 | valor_age | decimal | LOCACAO: valor combinado; sugerido pela tabela de `precos_espacos` e editável (desconto a critério do gestor, motivo em `observacao_age`) |
+| data_original_age | data/hora | AULA_TURMA remarcado: início previsto pelos horários da turma; a geração de encontros usa esta data para não recriar o encontro no horário antigo |
 | status_age | **(enum)** | AGENDADO, REALIZADO, CANCELADO |
 | observacao_age | texto | |
+
+**Edição** (PUT): mesmas validações da criação, ignorando o próprio agendamento nos conflitos.
+- O tipo não muda (locação não vira aula); agendamento cancelado não é editável.
+- Participantes que continuam mantêm a presença; os novos começam PENDENTE.
+- LOCACAO: a cobrança em aberto acompanha (valor, responsável, vencimento, descrição); se já foi
+  paga, valor e responsável não podem mudar (ajuste no financeiro), mas local e horário sim.
+- AULA_TURMA: só local, data, horário e observação ("remarcar" um encontro); os alunos vêm da turma.
 
 AULA é qualquer aula fora de turma, com um ou mais alunos: particular de tênis, treino físico
 da equipe marcado no dia que o aluno escolher etc.
@@ -317,6 +352,42 @@ vencendo na data de início.
 | Combinação (ex.: tênis 3x + físico 1x) | um `contrato` MENSAL com dois itens; cada aula marcada desconta da cota semanal do item da sua modalidade |
 | Turma | `turma` + `turmas_horarios` + `turmas_alunos` (entra/sai a qualquer momento); encontros viram `agendamentos` AULA_TURMA |
 
+## Decidido, ainda não implementado
+
+Decisões do gestor (12/10/2026). Ao implementar cada item, mover a regra para a tabela
+correspondente acima.
+
+**Faltas e reposição**
+- FALTA consome a cota. Pode virar FALTA_JUSTIFICADA depois, se vier uma explicação (decisão do
+  professor), com justificativa obrigatória: `participantes_agendamento` + `justificativa_par`.
+- Falta justificada dá direito a **reposição, sem prazo**, em **qualquer aula ou turma da mesma
+  modalidade**. O participante da reposição aponta para a falta que repõe
+  (`codpar_reposicao_par`, FK participantes_agendamento), **não consome cota**, e cada falta é
+  reposta uma única vez. Exige poder incluir um aluno avulso num encontro de turma.
+
+**Encerramento de contrato mensal**
+- Ao encerrar ou cancelar no meio do mês, o gestor escolhe se o último mês é cobrado
+  **integral ou proporcional** (`cobranca_final_con`: INTEGRAL, PROPORCIONAL; proporcional = dias
+  do 1º do mês até o fim ÷ dias do mês).
+- Correção: a geração de mensalidades deve considerar contratos ativos em **qualquer dia** do mês
+  (hoje considera só os ATIVO na hora da geração, e um contrato encerrado antes dela fica sem a
+  cobrança do mês). Se a mensalidade do mês já existe em aberto, ela é ajustada.
+
+**Devolução de dinheiro**
+- Transação paga pode ter **devolução parcial ou total**, com motivo obrigatório: nasce uma
+  DESPESA (categoria "Devoluções") ligada à original (`codtra_origem_tra`), em aberto até o
+  dinheiro sair. Cancelar uma locação já paga oferece registrar a devolução.
+
+**Locação fixa mensal**
+- `locacoes_fixas`: pessoa, espaço, horários semanais, início/fim, **valor mensal fixo**, dia de
+  vencimento, status. Gera os agendamentos LOCACAO da semana (como os encontros de turma, sem
+  cobrança por vez) e entra na geração de mensalidades.
+
+**Outros**
+- Jogadores na locação: participantes JOGADOR **opcionais** (o responsável continua obrigatório).
+- Multa e juros por atraso: não há, por ora.
+- Painel inicial e interface **responsiva** (celular e tablet): a fazer.
+
 ## Mudanças em relação ao desenho original
 
 - `tipos_usuario` removida: em `pessoas`, os papéis viram `aluno_pes` e `professor_pes`
@@ -336,5 +407,7 @@ vencendo na data de início.
   (valores, datas, aulas, vencimento, itens novos), mas não troca de aluno nem o plano de um item:
   isso é remover o item e incluir outro.
 - Cores da agenda editáveis: `cor_mod` em `modalidades` e a tabela `configuracoes` (cor da locação).
+- Horário de funcionamento editável por dia da semana (`horarios_funcionamento`) e feriados com
+  fechamento ou horário especial (`feriados`).
 - Novas: `modalidades`, `configuracoes`, `planos`, `contratos`, `contratos_itens`, `turmas`, `turmas_horarios`, `turmas_alunos`.
-- Ainda não incluído (fase 2): bloqueios de quadra/professor (manutenção, férias), reposição de aulas.
+- Ainda não incluído (fase 2): bloqueios de quadra/professor (manutenção, férias).
