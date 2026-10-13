@@ -1,0 +1,193 @@
+.painel-inicial-indicadores {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.painel-inicial-colunas {
+  display: grid;
+  grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr);
+  gap: 16px;
+  align-items: start;
+}
+
+.painel-inicial-bloco {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 16px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+
+.painel-inicial-bloco-cabecalho {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.painel-inicial-bloco-cabecalho h2 {
+  margin: 0;
+  font-size: 1.0625rem;
+}
+
+.painel-inicial-subtitulo {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 8px 0 0;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+/* "Agora" com um ponto pulsando: o que está acontecendo neste momento */
+.painel-inicial-agora {
+  color: var(--accent);
+}
+
+.painel-inicial-agora::before {
+  content: '';
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--accent);
+  animation: painel-inicial-pulso 2s ease-in-out infinite;
+}
+
+@keyframes painel-inicial-pulso {
+  50% {
+    opacity: 0.35;
+  }
+}
+
+.painel-inicial-contagem {
+  min-width: 20px;
+  padding: 0 6px;
+  border-radius: 10px;
+  background: var(--border);
+  color: var(--text);
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
+.painel-inicial-lista,
+.painel-inicial-livres {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.painel-inicial-agendamento {
+  display: flex;
+  gap: 12px;
+  padding: 8px 10px;
+  border-radius: var(--radius);
+  color: inherit;
+  text-decoration: none;
+}
+
+.painel-inicial-agendamento:hover,
+.painel-inicial-agendamento:focus-visible {
+  background: var(--bg);
+}
+
+.painel-inicial-hora {
+  flex: none;
+  width: 92px;
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+}
+
+.painel-inicial-agendamento-texto,
+.painel-inicial-pendencia > span {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.painel-inicial-agendamento-texto > span,
+.painel-inicial-pendencia > span > span {
+  font-size: 0.8125rem;
+  color: var(--text-muted);
+}
+
+.painel-inicial-agendamento-texto strong {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.painel-inicial-livres li {
+  font-size: 0.875rem;
+}
+
+.painel-inicial-livres strong {
+  margin-right: 6px;
+}
+
+.painel-inicial-pendencia {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 10px;
+  border-radius: var(--radius);
+  background: var(--bg);
+}
+
+.painel-inicial-pendencia > .botao,
+.painel-inicial-pendencia > a {
+  flex: none;
+}
+
+.painel-inicial-pendencia-destaque {
+  border-left: 4px solid var(--accent);
+}
+
+.painel-inicial-vazio {
+  margin: 0;
+  color: var(--text-muted);
+}
+
+.painel-inicial-mais {
+  align-self: flex-start;
+  font-size: 0.8125rem;
+  color: var(--accent);
+}
+
+/* no celular o gestor abre o app para resolver algo: pendências antes da agenda */
+@media (max-width: 900px) {
+  .painel-inicial-colunas {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .painel-inicial-colunas > :last-child {
+    order: -1;
+  }
+}
+
+@media (max-width: 600px) {
+  .painel-inicial-indicadores {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .painel-inicial-hora {
+    width: 80px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .painel-inicial-agora::before {
+    animation: none;
+  }
+}

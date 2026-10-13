@@ -114,3 +114,47 @@ it('criar transação calcula os totais e exige o essencial', async () => {
     api.transacoesApi.criar({ tipo: 'DESPESA', dataVencimento: '2026-10-15', movimentos: [{ descricao: 'x', quantidade: 1, valorUnitario: 1 }] }),
   ).rejects.toThrow('Informe a categoria da despesa.')
 })
+
+describe('devolução', () => {
+  // transação 3: pacote de 10 aulas, R$ 1.100, pago
+  const devolver = (valor: number, motivo = 'desistência') =>
+    api.transacoesApi.registrarDevolucao(3, { valor, motivo, dataVencimento: '2026-10-15' })
+
+  it('vira uma despesa ligada à receita, com o motivo e a pessoa', async () => {
+    const devolucao = await devolver(400)
+    expect(devolucao).toMatchObject({
+      tipo: 'DESPESA',
+      origemId: 3,
+      pessoaId: 4,
+      valorTotal: 400,
+      observacao: 'desistência',
+      status: 'ABERTA',
+    })
+    expect(devolucao.categoriaId).toBeUndefined()
+    expect(devolucao.movimentos[0].descricao).toBe('Devolução — Pacote 10 aulas tênis')
+  })
+
+  it('pode ser parcial, até o que ainda não foi devolvido', async () => {
+    await devolver(1000)
+    await expect(devolver(100.01)).rejects.toThrow('até R$')
+    const segunda = await devolver(100)
+    expect(segunda.valorTotal).toBe(100)
+  })
+
+  it('devolução cancelada libera o valor de novo', async () => {
+    const devolucao = await devolver(1100)
+    await api.transacoesApi.cancelar(devolucao.id, 'não vai mais devolver')
+    expect((await devolver(1100)).valorTotal).toBe(1100)
+  })
+
+  it('exige motivo, valor positivo e receita paga', async () => {
+    await expect(devolver(100, '  ')).rejects.toThrow('Informe o motivo da devolução.')
+    await expect(devolver(0)).rejects.toThrow('A devolução deve ser')
+    await expect(
+      api.transacoesApi.registrarDevolucao(2, { valor: 10, motivo: 'x', dataVencimento: '2026-10-15' }),
+    ).rejects.toThrow('Só receitas pagas podem ter devolução.')
+    await expect(
+      api.transacoesApi.registrarDevolucao(6, { valor: 10, motivo: 'x', dataVencimento: '2026-10-15' }),
+    ).rejects.toThrow('Só receitas pagas podem ter devolução.')
+  })
+})

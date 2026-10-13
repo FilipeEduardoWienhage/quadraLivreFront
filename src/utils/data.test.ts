@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { diaDaSemana, formatarDiaPorExtenso, hojeIso, inicioDaSemana, somarDias } from './data'
+import { diaDaSemana, diasEntre, formatarDiaPorExtenso, hojeIso, inicioDaSemana, somarDias } from './data'
 
 it('hojeIso usa a data local (nos testes, 12/10/2026)', () => {
   expect(hojeIso()).toBe('2026-10-12')
@@ -41,4 +41,10 @@ describe('inicioDaSemana (segunda a domingo)', () => {
 
 it('formatarDiaPorExtenso', () => {
   expect(formatarDiaPorExtenso('2026-10-12')).toBe('segunda-feira, 12/10/2026')
+})
+
+it('diasEntre conta dias de calendário, nos dois sentidos', () => {
+  expect(diasEntre('2026-10-10', '2026-10-12')).toBe(2)
+  expect(diasEntre('2026-10-12', '2026-10-10')).toBe(-2)
+  expect(diasEntre('2026-12-31', '2027-01-01')).toBe(1)
 })

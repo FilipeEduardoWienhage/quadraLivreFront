@@ -1,4 +1,4 @@
-import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
+import { BrowserRouter, Route, Routes } from 'react-router-dom'
 import { ToastProvider } from './components'
 import AdminLayout from './layouts/AdminLayout'
 import Agenda from './pages/agenda/Agenda'
@@ -9,6 +9,7 @@ import Configuracoes from './pages/configuracoes/Configuracoes'
 import CategoriasDespesa from './pages/financeiro/CategoriasDespesa'
 import Financeiro from './pages/financeiro/Financeiro'
 import Modalidades from './pages/Modalidades'
+import PainelInicial from './pages/painel/PainelInicial'
 import Pessoas from './pages/Pessoas'
 import Planos from './pages/Planos'
 import Servicos from './pages/Servicos'
@@ -21,7 +22,7 @@ export default function App() {
         <Routes>
           <Route path="/login" element={<EmConstrucao titulo="Login" />} />
           <Route element={<AdminLayout />}>
-            <Route index element={<Navigate to="/agenda" replace />} />
+            <Route index element={<PainelInicial />} />
             <Route path="/agenda" element={<Agenda />} />
             <Route path="/pessoas" element={<Pessoas />} />
             <Route path="/turmas" element={<Turmas />} />

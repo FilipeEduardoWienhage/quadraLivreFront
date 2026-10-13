@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { HorarioSemanal } from '../types/models'
-import { formatarHorarios, minutos, paraHora, validarHorarios } from './horarios'
+import { formatarHorarios, janelasLivres, minutos, paraHora, validarHorarios } from './horarios'
 
 const h = (diaSemana: HorarioSemanal['diaSemana'], horaInicio: string, horaFim: string): HorarioSemanal => ({
   diaSemana,
@@ -43,5 +43,21 @@ describe('validarHorarios', () => {
 
   it('o mesmo horário em dias diferentes não é sobreposição', () => {
     expect(validarHorarios([h(1, '18:00', '19:00'), h(3, '18:00', '19:00')])).toBeNull()
+  })
+})
+
+describe('janelasLivres', () => {
+  const [h8, h10, h11, h12, h14, h22] = ['08:00', '10:00', '11:00', '12:00', '14:00', '22:00'].map(minutos)
+  it('entre e depois dos ocupados, fora de ordem e sobrepostos', () => {
+    expect(janelasLivres([[h11, h12], [h8, h10], [h8, h11]], h8, h22, 60)).toEqual([[h12, h22]])
+    expect(janelasLivres([[h10, h11], [h12, h14]], h8, h22, 60)).toEqual([[h8, h10], [h11, h12], [h14, h22]])
+  })
+  it('ignora janelas menores que o mínimo e ocupados fora do intervalo', () => {
+    expect(janelasLivres([[h8, h10]], h10 - 30, h22, 60)).toEqual([[h10, h22]])
+    expect(janelasLivres([[h10 + 30, h11]], h10, h22, 60)).toEqual([[h11, h22]])
+  })
+  it('dia todo livre ou todo ocupado', () => {
+    expect(janelasLivres([], h8, h22, 60)).toEqual([[h8, h22]])
+    expect(janelasLivres([[h8, h22]], h8, h22, 60)).toEqual([])
   })
 })

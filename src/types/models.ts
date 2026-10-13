@@ -14,6 +14,7 @@ export type StatusEspaco = 'ATIVO' | 'MANUTENCAO' | 'INATIVO'
 export type FormaLocacao = 'NAO' | 'POR_HORA' | 'POR_PERIODO'
 export type TipoPlano = 'PACOTE' | 'MENSAL'
 export type StatusContrato = 'ATIVO' | 'ENCERRADO' | 'CANCELADO'
+export type CobrancaFinal = 'INTEGRAL' | 'PROPORCIONAL'
 /** AULA: qualquer aula fora de turma, com um ou mais alunos */
 export type TipoAgendamento = 'LOCACAO' | 'AULA' | 'AULA_TURMA'
 export type StatusAgendamento = 'AGENDADO' | 'REALIZADO' | 'CANCELADO'
@@ -165,6 +166,10 @@ export interface Contrato {
   diaVencimento?: number
   /** MENSAL: 1ª mensalidade proporcional aos dias restantes do mês */
   proporcional?: boolean
+  /** MENSAL encerrado ou cancelado: como cobrar o último mês (escolha do gestor) */
+  cobrancaFinal?: CobrancaFinal
+  /** PROPORCIONAL: total cobrado no último mês, definido pelo gestor (a sugestão é pelos dias) */
+  valorFinal?: number
   /** motivo de ajustes feitos depois da venda (renegociação, cortesia…) */
   observacao?: string
   status: StatusContrato
@@ -238,8 +243,10 @@ export interface Transacao {
   tipo: TipoTransacao
   /** RECEITA: quem paga (obrigatório); DESPESA: a quem se paga (opcional) */
   pessoaId?: Id
-  /** só DESPESA */
+  /** só DESPESA (dispensada na devolução) */
   categoriaId?: Id
+  /** devolução: a receita paga de onde o dinheiro volta (a transação é uma DESPESA) */
+  origemId?: Id
   /** linhas de movimentos; trafegam junto com a transação */
   movimentos: Movimento[]
   /** soma dos movimentos */

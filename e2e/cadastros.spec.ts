@@ -51,3 +51,19 @@ test('quadra nova com tabela de preço aparece na agenda', async ({ page }) => {
   await page.getByRole('link', { name: 'Agenda' }).click()
   await expect(cartao(page, 'Quadra 4')).toContainText('Livre agora')
 })
+
+test('contrato mensal: encerrar com valor do último mês definido pelo gestor', async ({ page }) => {
+  await page.goto('/contratos')
+  await page.getByRole('row').filter({ hasText: 'Ana Souza' }).getByRole('button', { name: 'Encerrar' }).click()
+  const dialogo = page.getByRole('dialog')
+  await dialogo.getByLabel(/Cobrança do último mês/).selectOption({ label: 'Proporcional' })
+  await expect(dialogo.getByLabel('Valor integral do mês')).toHaveValue('R$ 380,00')
+  const valor = dialogo.getByLabel('Valor a cobrar')
+  await expect(valor).toHaveValue('147.1') // sugestão: 12 de 31 dias
+  await valor.fill('150')
+  await dialogo.getByRole('button', { name: 'Encerrar contrato' }).click()
+  await expect(toast(page, 'Contrato encerrado.')).toBeVisible()
+
+  await page.goto('/financeiro')
+  await expect(page.getByRole('row').filter({ hasText: 'Ana Souza' })).toContainText('R$ 150,00')
+})

@@ -3,6 +3,7 @@ import { NavLink, Outlet } from 'react-router-dom'
 import './AdminLayout.css'
 
 const menu = [
+  { to: '/', label: 'Painel' },
   { to: '/agenda', label: 'Agenda' },
   { to: '/pessoas', label: 'Pessoas' },
   { to: '/turmas', label: 'Turmas' },
@@ -68,7 +69,7 @@ export default function AdminLayout() {
         </div>
         <nav aria-label="Menu principal">
           {menu.map((item) => (
-            <NavLink key={item.to} to={item.to} className="nav-link" onClick={() => setMenuAberto(false)}>
+            <NavLink key={item.to} to={item.to} end className="nav-link" onClick={() => setMenuAberto(false)}>
               {item.label}
             </NavLink>
           ))}

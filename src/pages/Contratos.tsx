@@ -8,7 +8,6 @@ import {
   CaixaSelecao,
   Campo,
   CampoBusca,
-  DialogoConfirmacao,
   Entrada,
   Etiqueta,
   GrupoCampos,
@@ -21,14 +20,16 @@ import {
 } from '../components'
 import { useEdicao } from '../hooks/useEdicao'
 import { useRecurso } from '../hooks/useRecurso'
-import { contratosApi, pessoasApi, planosApi, type DadosContrato } from '../services'
+import { contratosApi, pessoasApi, planosApi, type DadosContrato, type Finalizacao as FinalizacaoApi } from '../services'
 import type { Contrato, StatusContrato, TipoPlano } from '../types/models'
+import { totalContrato } from '../utils/contrato'
 import { hojeIso, somarDias } from '../utils/data'
 import { formatarData } from '../utils/formatar'
 import { paraOpcao } from '../utils/opcoes'
 import { descreverValor, tiposPlano } from '../utils/rotulos'
 import { contemTermo } from '../utils/texto'
 import ContratoItens from './ContratoItens'
+import ModalFinalizarContrato from './ModalFinalizarContrato'
 
 const status: Record<StatusContrato, { rotulo: string; cor: CorEtiqueta }> = {
   ATIVO: { rotulo: 'Ativo', cor: 'verde' },
@@ -50,7 +51,6 @@ function contratoVazio(): DadosContrato {
   return { alunoId: 0, tipo: 'MENSAL', itens: [], dataInicio: hoje, diaVencimento: diaVencimentoPadrao(hoje), status: 'ATIVO' }
 }
 
-const totalContrato = (c: Pick<Contrato, 'itens'>) => c.itens.reduce((soma, item) => soma + item.valor, 0)
 
 type Finalizacao = { contrato: Contrato; status: 'ENCERRADO' | 'CANCELADO' }
 
@@ -134,14 +134,11 @@ export default function Contratos() {
     await contratos.salvar(valores, edicao.editando.id)
   }
 
-  async function finalizar() {
+  async function finalizar(dados: FinalizacaoApi) {
     if (!finalizacao) return
-    await contratosApi.finalizar(finalizacao.contrato.id, finalizacao.status)
+    await contratosApi.finalizar(finalizacao.contrato.id, dados)
     await contratos.recarregar()
   }
-
-  const nomeFinalizacao = finalizacao ? nomeAluno.get(finalizacao.contrato.alunoId) : ''
-  const cancelamento = finalizacao?.status === 'CANCELADO'
 
   const erro = contratos.erro ?? pessoas.erro ?? planos.erro
 
@@ -295,21 +292,15 @@ export default function Contratos() {
         </Campo>
       </ModalFormulario>
 
-      <DialogoConfirmacao
-        aberto={finalizacao !== null}
-        titulo={cancelamento ? 'Cancelar contrato' : 'Encerrar contrato'}
-        mensagem={
-          cancelamento
-            ? `Cancelar o contrato de ${nomeFinalizacao}? Use para desistência do aluno.`
-            : `Encerrar o contrato de ${nomeFinalizacao}? Use quando o contrato terminou normalmente.`
-        }
-        textoConfirmar={cancelamento ? 'Cancelar contrato' : 'Encerrar contrato'}
-        textoCancelar="Voltar"
-        mensagemSucesso={cancelamento ? 'Contrato cancelado.' : 'Contrato encerrado.'}
-        perigo={cancelamento}
-        onCancelar={() => setFinalizacao(null)}
-        onConfirmar={finalizar}
-      />
+      {finalizacao && (
+        <ModalFinalizarContrato
+          contrato={finalizacao.contrato}
+          status={finalizacao.status}
+          nomeAluno={nomeAluno.get(finalizacao.contrato.alunoId) ?? ''}
+          onConfirmar={finalizar}
+          onFechar={() => setFinalizacao(null)}
+        />
+      )}
     </>
   )
 }

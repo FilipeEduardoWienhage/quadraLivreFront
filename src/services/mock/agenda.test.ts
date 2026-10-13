@@ -230,6 +230,19 @@ describe('locação e cobrança', () => {
     await api.agendamentosApi.cancelar(reserva.id, 'chuva')
     expect((await api.transacoesApi.buscar(cobranca.id)).status).toBe('PAGA')
   })
+
+  it('com devolução, a cobrança paga ganha uma devolução do valor integral', async () => {
+    const reserva = await api.agendamentosApi.criar(locacao(2, '17:00', '19:00', 180))
+    const cobranca = (await api.transacoesApi.listar()).at(-1)!
+    await api.transacoesApi.registrarPagamento(cobranca.id, { formaPagamentoId: 1, dataPagamento: SEGUNDA })
+    await api.agendamentosApi.cancelar(reserva.id, 'chuva', { devolver: true })
+    const devolucao = (await api.transacoesApi.listar()).find((t) => t.origemId === cobranca.id)!
+    expect([devolucao.valorTotal, devolucao.observacao, devolucao.dataVencimento]).toEqual([
+      180,
+      'Locação cancelada: chuva',
+      SEGUNDA,
+    ])
+  })
 })
 
 describe('cota do contrato', () => {

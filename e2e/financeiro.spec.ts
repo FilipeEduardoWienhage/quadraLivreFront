@@ -78,3 +78,18 @@ test('lançar despesa', async ({ page }) => {
   await expect(page.getByRole('row').filter({ hasText: 'Troca de rede' })).toContainText('Despesa')
   await expect(indicador(page, 'A pagar')).toContainText('R$ 990,00')
 })
+
+test('devolução parcial de uma receita paga vira conta a pagar', async ({ page }) => {
+  await page.getByLabel('Filtrar por situação').selectOption({ label: 'Pagas' })
+  await page.getByRole('row').filter({ hasText: 'Pacote 10 aulas' }).getByRole('button', { name: 'Devolver' }).click()
+  const dialogo = page.getByRole('dialog')
+  await expect(dialogo.getByLabel('Valor a devolver')).toHaveValue('1100')
+  await dialogo.getByLabel('Valor a devolver').fill('300')
+  await dialogo.getByLabel('Motivo').fill('aulas não usadas')
+  await dialogo.getByRole('button', { name: 'Registrar devolução' }).click()
+
+  await expect(toast(page, 'Devolução registrada em contas a pagar.')).toBeVisible()
+  await expect(indicador(page, 'A pagar')).toContainText('R$ 940,00')
+  await page.getByLabel('Filtrar por situação').selectOption({ label: 'Pendentes (em aberto e vencidas)' })
+  await expect(page.getByRole('row').filter({ hasText: 'Devolução — Pacote 10 aulas' })).toContainText('Devolução —')
+})

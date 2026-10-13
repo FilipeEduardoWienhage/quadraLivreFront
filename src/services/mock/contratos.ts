@@ -1,9 +1,11 @@
 // Simula as regras do servidor para contratos (ver contratos em docs/modelagem.md).
 import type { ContratosApi, DadosContratoItem } from '../api'
 import type { Contrato } from '../../types/models'
+import { totalContrato } from '../../utils/contrato'
 import { hojeIso } from '../../utils/data'
+import { arredondarMoeda, formatarMoeda } from '../../utils/formatar'
 import { omitir } from '../../utils/objeto'
-import { criarTransacao } from './financeiro'
+import { ajustarMensalidadesAoFinalizar, criarTransacao } from './financeiro'
 import { numerarNovos } from './numerar'
 import { contratosBase, planosApi } from './recursos'
 
@@ -41,11 +43,26 @@ export const contratosApi: ContratosApi = {
   async atualizar(id, dados) {
     return contratosBase.atualizar(id, { ...dados, itens: await numerarItens(dados.itens) })
   },
-  async finalizar(id, status) {
+  async finalizar(id, { status, cobrancaFinal, valorFinal }) {
     const contrato = await contratosBase.buscar(id)
     if (contrato.status !== 'ATIVO') throw new Error('Só contratos ativos podem ser encerrados ou cancelados.')
+    const mensal = contrato.tipo === 'MENSAL'
+    if (mensal && !cobrancaFinal) throw new Error('Informe como cobrar o último mês.')
+    const proporcional = mensal && cobrancaFinal === 'PROPORCIONAL'
+    const integral = totalContrato(contrato)
+    if (proporcional && !(valorFinal && valorFinal > 0 && valorFinal <= integral)) {
+      throw new Error(`O valor do último mês deve ser de R$ 0,01 até ${formatarMoeda(integral)} (o mês integral).`)
+    }
     const hoje = hojeIso()
     const dataFim = contrato.dataFim && contrato.dataFim < hoje ? contrato.dataFim : hoje
-    return contratosBase.atualizar(id, { ...omitir(contrato, 'id'), status, dataFim })
+    const finalizado = await contratosBase.atualizar(id, {
+      ...omitir(contrato, 'id'),
+      status,
+      dataFim,
+      cobrancaFinal: mensal ? cobrancaFinal : undefined,
+      valorFinal: proporcional ? arredondarMoeda(valorFinal!) : undefined,
+    })
+    await ajustarMensalidadesAoFinalizar(finalizado)
+    return finalizado
   },
 }

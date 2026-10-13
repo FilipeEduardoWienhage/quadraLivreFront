@@ -14,10 +14,12 @@ interface Props {
   /** pessoa ou categoria, já resolvida pela página */
   titulo: string
   formaPagamento?: string
+  /** receita: quanto já foi registrado para devolução */
+  devolvido?: number
   onFechar: () => void
 }
 
-export default function DetalheTransacao({ transacao, titulo, formaPagamento, onFechar }: Props) {
+export default function DetalheTransacao({ transacao, titulo, formaPagamento, devolvido, onFechar }: Props) {
   return (
     <Modal
       aberto
@@ -41,6 +43,11 @@ export default function DetalheTransacao({ transacao, titulo, formaPagamento, on
           {transacao.dataPagamento && (
             <Campo rotulo="Pagamento">
               <Entrada value={`${formatarData(transacao.dataPagamento)} — ${formaPagamento ?? ''}`} readOnly />
+            </Campo>
+          )}
+          {devolvido !== undefined && devolvido > 0 && (
+            <Campo rotulo="Devolvido">
+              <Entrada value={formatarMoeda(devolvido)} readOnly />
             </Campo>
           )}
         </LinhaCampos>

@@ -1,7 +1,9 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
-import { Alerta, Botao, CabecalhoPagina, ModalMotivo } from '../../components'
+import { useMemo, useRef, useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
+import { Alerta, Botao, CabecalhoPagina, CaixaSelecao, ModalMotivo } from '../../components'
 import { INTERVALO_AGENDA_MIN } from '../../config'
 import { useConfiguracoes } from '../../hooks/useConfiguracoes'
+import { minutoDoDia, useMinutoAtual } from '../../hooks/useMinutoAtual'
 import { mensagemErro, useRecurso } from '../../hooks/useRecurso'
 import { useToast } from '../../hooks/useToast'
 import {
@@ -34,21 +36,6 @@ import './Agenda.css'
 /** Enquanto as cores carregam, ou se faltar a modalidade. */
 const COR_NEUTRA = '#6b7280'
 
-const minutoDoDia = () => {
-  const agora = new Date()
-  return agora.getHours() * 60 + agora.getMinutes()
-}
-
-/** Minuto atual do dia, atualizado sozinho para a linha do "agora" andar. */
-function useMinutoAtual() {
-  const [minuto, setMinuto] = useState(minutoDoDia)
-  useEffect(() => {
-    const id = setInterval(() => setMinuto(minutoDoDia()), 30_000)
-    return () => clearInterval(id)
-  }, [])
-  return minuto
-}
-
 /** Agora arredondado para a próxima fatia da agenda, dentro do funcionamento do dia. */
 function proximaFatia(abertura: number, fechamento: number) {
   const fatia = Math.ceil(minutoDoDia() / INTERVALO_AGENDA_MIN) * INTERVALO_AGENDA_MIN
@@ -59,15 +46,19 @@ export default function Agenda() {
   const toast = useToast()
   const hoje = hojeIso()
   const minutoAtual = useMinutoAtual()
-  const [data, setData] = useState(hoje)
+  // o painel abre a agenda num dia e agendamento específicos: /agenda?data=…&agendamento=…
+  const [parametros] = useSearchParams()
+  const [data, setData] = useState(parametros.get('data') ?? hoje)
   /** '' = todas; LOCACOES; ou o id de uma modalidade */
   const [atividadeFiltro, setAtividadeFiltro] = useState('')
   /** '' = todos; QUADRAS; ou o id de um espaço */
   const [espacoFiltro, setEspacoFiltro] = useState('')
-  const [selecionadoId, setSelecionadoId] = useState<Id | null>(null)
+  const [selecionadoId, setSelecionadoId] = useState<Id | null>(Number(parametros.get('agendamento')) || null)
   const [novo, setNovo] = useState<InicialAgendamento | null>(null)
   const [editando, setEditando] = useState<Agendamento | null>(null)
   const [cancelando, setCancelando] = useState<Agendamento | null>(null)
+  /** locação cancelada: devolver o valor se a cobrança já foi paga */
+  const [devolver, setDevolver] = useState(false)
 
   const agenda = useAgendaDoDia(data)
   const espacos = useRecurso(espacosApi)
@@ -214,7 +205,7 @@ export default function Agenda() {
 
   async function cancelar(motivo: string) {
     if (!cancelando) return
-    await agendamentosApi.cancelar(cancelando.id, motivo)
+    await agendamentosApi.cancelar(cancelando.id, motivo, { devolver })
     agenda.recarregar()
   }
 
@@ -351,13 +342,20 @@ export default function Agenda() {
           textoConfirmar="Cancelar agendamento"
           mensagemSucesso="Agendamento cancelado."
           onConfirmar={cancelar}
-          onFechar={() => setCancelando(null)}
+          onFechar={() => {
+            setCancelando(null)
+            setDevolver(false)
+          }}
         >
           {cancelando.tipo === 'LOCACAO' && (
-            <Alerta tipo="info">
-              A cobrança em aberto desta locação também será cancelada. Se já foi paga, a devolução é feita no
-              Financeiro.
-            </Alerta>
+            <>
+              <Alerta tipo="info">A cobrança em aberto desta locação também será cancelada.</Alerta>
+              <CaixaSelecao
+                rotulo="Se a cobrança já foi paga, registrar a devolução do valor"
+                checked={devolver}
+                onChange={(e) => setDevolver(e.target.checked)}
+              />
+            </>
           )}
         </ModalMotivo>
       )}

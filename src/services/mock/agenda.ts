@@ -1,12 +1,12 @@
 // Simula as regras do servidor para a agenda (ver agendamentos em docs/modelagem.md).
 import type { Agendamento, Espaco, Id, ParticipanteAgendamento } from '../../types/models'
-import { diaDaSemana, inicioDaSemana, somarDias } from '../../utils/data'
+import { diaDaSemana, hojeIso, inicioDaSemana, somarDias } from '../../utils/data'
 import { formatarData } from '../../utils/formatar'
 import { funcionamentoDoDia } from '../../utils/funcionamento'
 import { omitir } from '../../utils/objeto'
 import { calcularValorLocacao } from '../../utils/precos'
 import type { AgendamentosApi, DadosAgendamento } from '../api'
-import { criarTransacao, transacoesApi } from './financeiro'
+import { criarTransacao, transacoesApi, valorDevolvivel } from './financeiro'
 import { numerarNovos } from './numerar'
 import {
   agendamentosBase,
@@ -230,12 +230,22 @@ export const agendamentosApi: AgendamentosApi = {
     return salvo
   },
 
-  async cancelar(id, motivo) {
+  async cancelar(id, motivo, opcoes) {
     const agendamento = await agendamentosBase.buscar(id)
     if (agendamento.status === 'CANCELADO') throw new Error('O agendamento já está cancelado.')
     const cobranca = await cobrancaDa(id)
-    // cobrança já paga fica como está: a devolução, se houver, é decisão do gestor no Financeiro
     if (cobranca?.status === 'ABERTA') await transacoesApi.cancelar(cobranca.id, `Agendamento cancelado: ${motivo}`)
+    // já paga: devolve se o gestor pediu (o que ainda não foi devolvido); senão, fica como está
+    if (cobranca?.status === 'PAGA' && opcoes?.devolver) {
+      const restante = await valorDevolvivel(cobranca.id)
+      if (restante > 0) {
+        await transacoesApi.registrarDevolucao(cobranca.id, {
+          valor: restante,
+          motivo: `Locação cancelada: ${motivo}`,
+          dataVencimento: hojeIso(),
+        })
+      }
+    }
     return agendamentosBase.atualizar(id, { ...agendamento, status: 'CANCELADO', observacao: motivo })
   },
 

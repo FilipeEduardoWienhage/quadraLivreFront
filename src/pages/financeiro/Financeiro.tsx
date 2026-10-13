@@ -24,11 +24,12 @@ import {
 } from '../../services'
 import type { TipoTransacao, Transacao } from '../../types/models'
 import { hojeIso } from '../../utils/data'
-import { formatarCompetencia, formatarData, formatarMoeda, pluralizar } from '../../utils/formatar'
+import { arredondarMoeda, formatarCompetencia, formatarData, formatarMoeda, pluralizar } from '../../utils/formatar'
 import { contemTermo } from '../../utils/texto'
 import DetalheTransacao from './DetalheTransacao'
 import ModalCancelamento from './ModalCancelamento'
 import ModalDespesa from './ModalDespesa'
+import ModalDevolucao from './ModalDevolucao'
 import ModalMensalidades from './ModalMensalidades'
 import ModalPagamento from './ModalPagamento'
 import ModalReceita from './ModalReceita'
@@ -60,7 +61,7 @@ const opcoesTipo = [
 ]
 
 type Acao =
-  | { tipo: 'detalhe' | 'pagamento' | 'cancelamento'; transacao: Transacao }
+  | { tipo: 'detalhe' | 'pagamento' | 'cancelamento' | 'devolucao'; transacao: Transacao }
   | { tipo: 'receita' | 'despesa' | 'mensalidades' }
 
 export default function Financeiro() {
@@ -84,11 +85,23 @@ export default function Financeiro() {
   const nomeCategoria = useMemo(() => new Map(categorias.itens.map((c) => [c.id, c.nome])), [categorias.itens])
   const nomeForma = useMemo(() => new Map(formas.itens.map((f) => [f.id, f.descricao])), [formas.itens])
 
-  /** Receita: quem paga. Despesa: categoria (e o favorecido, se houver). */
+  /** Receita: quem paga. Despesa: categoria (ou "Devolução") e o favorecido, se houver. */
   const titulo = (t: Transacao) =>
     t.tipo === 'RECEITA'
       ? (nomePessoa.get(t.pessoaId ?? 0) ?? '—')
-      : [nomeCategoria.get(t.categoriaId ?? 0), t.pessoaId && nomePessoa.get(t.pessoaId)].filter(Boolean).join(' — ')
+      : [t.origemId ? 'Devolução' : nomeCategoria.get(t.categoriaId ?? 0), t.pessoaId && nomePessoa.get(t.pessoaId)]
+          .filter(Boolean)
+          .join(' — ')
+
+  /** Quanto já foi (ou será) devolvido de cada receita; devoluções canceladas não contam. */
+  const devolvido = useMemo(() => {
+    const porOrigem = new Map<number, number>()
+    for (const t of transacoes.itens) {
+      if (t.origemId && t.status !== 'CANCELADA') porOrigem.set(t.origemId, arredondarMoeda((porOrigem.get(t.origemId) ?? 0) + t.valorTotal))
+    }
+    return porOrigem
+  }, [transacoes.itens])
+  const restante = (t: Transacao) => arredondarMoeda(t.valorTotal - (devolvido.get(t.id) ?? 0))
 
   const filtradas = transacoes.itens
     .filter((t) => {
@@ -233,6 +246,11 @@ export default function Financeiro() {
                 </Botao>
               </>
             )}
+            {t.tipo === 'RECEITA' && t.status === 'PAGA' && restante(t) > 0 && (
+              <Botao variante="fantasma" pequeno onClick={() => setAcao({ tipo: 'devolucao', transacao: t })}>
+                Devolver
+              </Botao>
+            )}
           </>
         )}
       />
@@ -242,6 +260,7 @@ export default function Financeiro() {
           transacao={acao.transacao}
           titulo={titulo(acao.transacao)}
           formaPagamento={nomeForma.get(acao.transacao.formaPagamentoId ?? 0)}
+          devolvido={devolvido.get(acao.transacao.id)}
           onFechar={() => setAcao(null)}
         />
       )}
@@ -257,6 +276,14 @@ export default function Financeiro() {
         <ModalCancelamento
           transacao={acao.transacao}
           onSalvar={(motivo) => executar(transacoesApi.cancelar(acao.transacao.id, motivo))}
+          onFechar={() => setAcao(null)}
+        />
+      )}
+      {acao?.tipo === 'devolucao' && (
+        <ModalDevolucao
+          transacao={acao.transacao}
+          restante={restante(acao.transacao)}
+          onSalvar={(devolucao) => executar(transacoesApi.registrarDevolucao(acao.transacao.id, devolucao))}
           onFechar={() => setAcao(null)}
         />
       )}

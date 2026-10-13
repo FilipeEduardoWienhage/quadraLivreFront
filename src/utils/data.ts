@@ -24,6 +24,12 @@ export function somarDias(iso: string, dias: number) {
   return paraIso(d)
 }
 
+/** Dias de 'de' até 'ate' ('YYYY-MM-DD'); negativo se 'ate' vem antes. */
+export function diasEntre(de: string, ate: string) {
+  // arredonda: a troca de horário de verão deixa um dia com 23 ou 25 horas
+  return Math.round((paraDate(ate).getTime() - paraDate(de).getTime()) / 86_400_000)
+}
+
 /** Dia da semana de 'YYYY-MM-DD…': 0 = domingo … 6 = sábado. */
 export function diaDaSemana(iso: string) {
   return paraDate(iso).getDay() as DiaSemana

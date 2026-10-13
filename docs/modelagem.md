@@ -176,9 +176,11 @@ inteiro: uma cobrança só por mês, com um movimento por item.
 | codpes_con | FK pessoas | aluno |
 | tipo_con | **(enum)** | PACOTE, MENSAL — todos os itens têm planos deste tipo |
 | data_inicio_con | data | |
-| data_fim_con | data | PACOTE: início + maior validade entre os itens; MENSAL: vazio enquanto ativo |
+| data_fim_con | data | PACOTE: início + maior validade entre os itens; MENSAL: vazio enquanto ativo; ao encerrar/cancelar: hoje |
 | dia_vencimento_con | inteiro | MENSAL: dia do mês da cobrança |
 | proporcional_con | booleano | MENSAL: 1ª mensalidade proporcional aos dias restantes do mês |
+| cobranca_final_con | **(enum)** | MENSAL encerrado/cancelado: INTEGRAL, PROPORCIONAL — escolha do gestor para o último mês |
+| valor_final_con | decimal | PROPORCIONAL: total do último mês, definido pelo gestor (até o valor integral) |
 | observacao_con | texto | motivo de ajustes após a venda (renegociação, cortesia…) |
 | status_con | **(enum)** | ATIVO, ENCERRADO, CANCELADO |
 
@@ -307,7 +309,8 @@ Pagamento só integral: registrar o pagamento quita a transação. Sem multa/jur
 | codigo_tra | PK | |
 | tipo_tra | **(enum)** | RECEITA, DESPESA |
 | codpes_tra | FK pessoas | RECEITA: quem paga (obrigatório); DESPESA: a quem se paga (opcional, ex.: professor) |
-| codcde_tra | FK categorias_despesa | só DESPESA (obrigatório) |
+| codcde_tra | FK categorias_despesa | só DESPESA (obrigatório, exceto devolução) |
+| codtra_origem_tra | FK transacoes | devolução: a RECEITA paga cujo valor (ou parte) é devolvido |
 | codfpg_tra | FK formas_pagamento | preenchido ao pagar |
 | valtot_tra | decimal | soma dos movimentos |
 | data_tra | data/hora | criação |
@@ -336,7 +339,19 @@ itens de despesa só têm descrição e valor.
 **Geração de mensalidades** (rotina diária no backend; no front, botão "Gerar mensalidades"):
 para cada contrato MENSAL ativo no mês, uma transação com um movimento por item.
 - Vencimento: dia `dia_vencimento_con` do mês; se cair antes do início do contrato, vence no início.
+- Considera contratos ativos em **qualquer dia** do mês, inclusive os já encerrados nele.
 - 1º mês proporcional (se `proporcional_con`): valor × (dias do mês − dia do início + 1) ÷ dias do mês.
+- Último mês proporcional (se `cobranca_final_con` = PROPORCIONAL): cobra `valor_final_con`, rateado
+  entre os itens pelo valor de cada um. A tela sugere valor × dias usados ÷ dias do mês.
+
+**Encerrar/cancelar contrato MENSAL**: o gestor escolhe `cobranca_final_con` (e, se proporcional, o valor). A mensalidade
+do mês do fim, se já gerada e em aberto, é recalculada; as em aberto de meses seguintes são
+canceladas. Mensalidades pagas não mudam (se for o caso, registra-se uma devolução).
+
+**Devolução**: receita PAGA pode ter devoluções parciais ou totais, com motivo obrigatório,
+até o valor ainda não devolvido (devoluções canceladas não contam). Cada uma é uma DESPESA sem
+categoria, com `codtra_origem_tra` e a mesma pessoa, em aberto até o dinheiro sair. Cancelar
+uma locação já paga oferece registrar a devolução do valor integral.
 
 **Venda de pacote**: ao registrar o contrato PACOTE, nasce uma transação com um movimento por item,
 vencendo na data de início.
@@ -352,6 +367,17 @@ vencendo na data de início.
 | Combinação (ex.: tênis 3x + físico 1x) | um `contrato` MENSAL com dois itens; cada aula marcada desconta da cota semanal do item da sua modalidade |
 | Turma | `turma` + `turmas_horarios` + `turmas_alunos` (entra/sai a qualquer momento); encontros viram `agendamentos` AULA_TURMA |
 
+## Painel inicial (`GET /painel`)
+
+Página inicial do gestor. A agenda do dia vem de `GET /agendamentos?data=`; o resto é
+calculado no servidor, para a tela não carregar todas as transações e agendamentos:
+- Recebido no mês (receitas pagas no mês) e previsto (não canceladas com vencimento no mês).
+- Cobranças vencidas: receitas ABERTAS com vencimento passado.
+- Presença não registrada: aulas dos últimos 7 dias, já terminadas, com aluno em PENDENTE.
+- Pacotes terminando: ATIVOS com até 2 aulas restantes (agendadas contam como usadas) ou
+  validade nos próximos 14 dias.
+- Devoluções em aberto e contratos mensais ainda sem a mensalidade do mês atual.
+
 ## Decidido, ainda não implementado
 
 Decisões do gestor (12/10/2026). Ao implementar cada item, mover a regra para a tabela
@@ -365,19 +391,6 @@ correspondente acima.
   (`codpar_reposicao_par`, FK participantes_agendamento), **não consome cota**, e cada falta é
   reposta uma única vez. Exige poder incluir um aluno avulso num encontro de turma.
 
-**Encerramento de contrato mensal**
-- Ao encerrar ou cancelar no meio do mês, o gestor escolhe se o último mês é cobrado
-  **integral ou proporcional** (`cobranca_final_con`: INTEGRAL, PROPORCIONAL; proporcional = dias
-  do 1º do mês até o fim ÷ dias do mês).
-- Correção: a geração de mensalidades deve considerar contratos ativos em **qualquer dia** do mês
-  (hoje considera só os ATIVO na hora da geração, e um contrato encerrado antes dela fica sem a
-  cobrança do mês). Se a mensalidade do mês já existe em aberto, ela é ajustada.
-
-**Devolução de dinheiro**
-- Transação paga pode ter **devolução parcial ou total**, com motivo obrigatório: nasce uma
-  DESPESA (categoria "Devoluções") ligada à original (`codtra_origem_tra`), em aberto até o
-  dinheiro sair. Cancelar uma locação já paga oferece registrar a devolução.
-
 **Locação fixa mensal**
 - `locacoes_fixas`: pessoa, espaço, horários semanais, início/fim, **valor mensal fixo**, dia de
   vencimento, status. Gera os agendamentos LOCACAO da semana (como os encontros de turma, sem
@@ -386,7 +399,6 @@ correspondente acima.
 **Outros**
 - Jogadores na locação: participantes JOGADOR **opcionais** (o responsável continua obrigatório).
 - Multa e juros por atraso: não há, por ora.
-- Painel inicial e interface **responsiva** (celular e tablet): a fazer.
 
 ## Mudanças em relação ao desenho original
 

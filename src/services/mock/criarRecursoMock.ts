@@ -1,9 +1,6 @@
 import type { Id } from '../../types/models'
 import type { Dados, Recurso } from '../api'
 
-/** Simula a rede; nos testes automatizados fica em zero para não deixá-los lentos. */
-const LATENCIA_MS = import.meta.env.MODE === 'test' ? 0 : 250
-
 /**
  * Aumente a versão ao mudar o formato dos dados mock: o que estiver salvo
  * no navegador com a versão antiga é ignorado e os dados iniciais voltam.
@@ -11,18 +8,15 @@ const LATENCIA_MS = import.meta.env.MODE === 'test' ? 0 : 250
 const VERSAO = 10
 const PREFIXO = `quadralivre:mock:v${VERSAO}:`
 
-function esperar() {
-  return new Promise((resolve) => setTimeout(resolve, LATENCIA_MS))
-}
-
 /**
- * Recurso com latência simulada, persistido no localStorage para os dados sobreviverem
+ * Recurso persistido no localStorage para os dados sobreviverem
  * ao recarregar a página.
  *
  * O localStorage é a fonte da verdade e é lido a cada operação, como um servidor leria o banco.
  * Assim, cópias do módulo coexistindo (o HMR do Vite recarrega módulos em desenvolvimento)
  * ou abas diferentes enxergam os mesmos dados. Sem localStorage, os dados ficam só em memória.
  *
+ * A latência de rede é simulada na fronteira (ver latencia.ts), não aqui.
  * `preencher` simula os campos que o servidor completa na criação.
  * Na atualização, campos não enviados são mantidos, como o servidor faria.
  */
@@ -61,15 +55,12 @@ export function criarRecursoMock<T extends { id: Id }, D = Dados<T>>(
 
   return {
     async listar() {
-      await esperar()
       return structuredClone(ler())
     },
     async buscar(id) {
-      await esperar()
       return structuredClone(encontrar(ler(), id))
     },
     async criar(dados) {
-      await esperar()
       const itens = ler()
       const id = itens.reduce((max, i) => Math.max(max, i.id), 0) + 1
       const novo = { ...preencher(dados), id } as T
@@ -77,14 +68,12 @@ export function criarRecursoMock<T extends { id: Id }, D = Dados<T>>(
       return structuredClone(novo)
     },
     async atualizar(id, dados) {
-      await esperar()
       const itens = ler()
       const atualizado: T = { ...encontrar(itens, id), ...dados, id }
       gravar(itens.map((i) => (i.id === id ? atualizado : i)))
       return structuredClone(atualizado)
     },
     async excluir(id) {
-      await esperar()
       const itens = ler()
       encontrar(itens, id)
       gravar(itens.filter((i) => i.id !== id))

@@ -4,7 +4,7 @@ interface Props {
   rotulo: string
   valor: string
   /** linha menor abaixo do valor, ex.: "3 cobranças" */
-  detalhe?: string
+  detalhe?: string | null
   tom?: 'neutro' | 'positivo' | 'alerta'
 }
 

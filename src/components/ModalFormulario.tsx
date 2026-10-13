@@ -13,6 +13,8 @@ interface Props {
   onSalvar: () => Promise<void>
   children: ReactNode
   textoSalvar?: string
+  /** botão que fecha sem salvar; troque quando a ação também se chama "Cancelar" */
+  textoCancelar?: string
   largura?: 'pequena' | 'media' | 'grande'
   /** toast exibido quando o salvamento dá certo */
   mensagemSucesso?: string
@@ -26,6 +28,7 @@ export default function ModalFormulario({
   onSalvar,
   children,
   textoSalvar = 'Salvar',
+  textoCancelar = 'Cancelar',
   largura,
   mensagemSucesso,
 }: Props) {
@@ -61,7 +64,7 @@ export default function ModalFormulario({
       rodape={
         <>
           <Botao variante="secundario" onClick={fechar} disabled={salvando}>
-            Cancelar
+            {textoCancelar}
           </Botao>
           <Botao type="submit" form={idFormulario} carregando={salvando}>
             {textoSalvar}

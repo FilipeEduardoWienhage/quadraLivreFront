@@ -49,3 +49,19 @@ export function validarHorarios(horarios: HorarioSemanal[]): string | null {
   }
   return null
 }
+
+/**
+ * Intervalos livres (em minutos do dia) entre `inicio` e `fim`, descontando os ocupados;
+ * só os de pelo menos `minimo` minutos.
+ */
+export function janelasLivres(ocupados: [number, number][], inicio: number, fim: number, minimo: number) {
+  const livres: [number, number][] = []
+  let cursor = inicio
+  for (const [de, ate] of [...ocupados].sort((a, b) => a[0] - b[0])) {
+    if (de - cursor >= minimo) livres.push([cursor, Math.min(de, fim)])
+    cursor = Math.max(cursor, ate)
+    if (cursor >= fim) break
+  }
+  if (fim - cursor >= minimo) livres.push([cursor, fim])
+  return livres
+}
