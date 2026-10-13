@@ -27,3 +27,8 @@ dist-ssr
 test-results
 playwright-report
 blob-report
+# Playwright CLI output (may contain credentials)
+.playwright-cli/
+
+# Playwright CLI (retratos e prints de exploração)
+.playwright-cli
